@@ -23,8 +23,12 @@ struct AudioFileLoaderTests {
             .appending(path: "loader-test-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: url) }
         let buffer = makeSineBuffer(sampleRate: 44_100, channels: 1)
-        let file = try AVAudioFile(forWriting: url, settings: buffer.format.settings)
-        try file.write(from: buffer)
+        do {
+            // Scope the writer: AVAudioFile flushes its header on deallocation,
+            // so it must die before we read the file back.
+            let file = try AVAudioFile(forWriting: url, settings: buffer.format.settings)
+            try file.write(from: buffer)
+        }
 
         let audio = try AudioFileLoader.load(url: url)
         #expect(abs(audio.duration - 0.5) < 0.05)
