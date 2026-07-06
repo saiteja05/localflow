@@ -3155,7 +3155,7 @@ Add `import CaptureKit` at the top (for `AudioData` in the protocol).
 - [ ] **Step 6: Write SystemTranscriber.swift**
 
 ```swift
-import AVFoundation
+@preconcurrency import AVFoundation   // silences Sendable warning on AVAudioPCMBuffer in converter block
 import Foundation
 import Speech
 import CaptureKit
