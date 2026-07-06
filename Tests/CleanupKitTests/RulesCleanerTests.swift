@@ -9,17 +9,19 @@ struct RulesCleanerTests {
         #expect(RulesCleaner.clean("Um, let's go") == "Let's go")
     }
     @Test func stripsFillerWithTrailingComma() {
-        #expect(RulesCleaner.clean("so, um, the plan works") == "so, the plan works")
+        #expect(RulesCleaner.clean("so, um, the plan works") == "So, the plan works")
     }
     @Test func stripsYouKnowAtClauseBoundary() {
-        #expect(RulesCleaner.clean("it works, you know, most days") == "it works, most days")
+        #expect(RulesCleaner.clean("it works, you know, most days") == "It works, most days")
         #expect(RulesCleaner.clean("You know, it works") == "It works")
     }
     @Test func keepsYouKnowMidClause() {
-        #expect(RulesCleaner.clean("do you know the answer") == "do you know the answer")
+        // First letter still gets capitalized (that rule is unconditional);
+        // the point here is that mid-clause "you know" is NOT stripped.
+        #expect(RulesCleaner.clean("do you know the answer") == "Do you know the answer")
     }
     @Test func collapsesImmediateWordRepetition() {
-        #expect(RulesCleaner.clean("the the plan is is ready") == "the plan is ready")
+        #expect(RulesCleaner.clean("the the plan is is ready") == "The plan is ready")
     }
     @Test func repetitionCollapseIsCaseInsensitiveKeepsFirst() {
         #expect(RulesCleaner.clean("The the plan") == "The plan")

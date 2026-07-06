@@ -8,9 +8,6 @@ public enum RulesCleaner {
     private static let fillers = ["um", "uh", "uhm", "umm", "erm", "er", "ah", "hmm"]
 
     public static func clean(_ text: String) -> String {
-        // Track whether something was removed from the start (for capitalization logic below).
-        let originalTrimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
         var s = text
 
         // 1. Strip standalone fillers, consuming one adjacent comma if present:
@@ -42,19 +39,9 @@ public enum RulesCleaner {
         s = s.replacingOccurrences(of: #"^[\s,.!?;:]+"#, with: "", options: .regularExpression)
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // 5. Capitalize first letter if (1) the first word is substantial (length > 3) OR (2) the original first word was removed.
-        // Conservative: don't force-capitalize common function words like "so", "do", "the"—unless they're now sentence-initial due to removal.
-        let originalFirstWord = originalTrimmed.split(separator: " ").first.map { String($0).lowercased() } ?? ""
-        let originalFirstWordWasRemoved = !originalFirstWord.isEmpty &&
-            !s.lowercased().starts(with: originalFirstWord)
-
+        // 5. Capitalize first letter (leave the rest untouched).
         if let first = s.first, first.isLowercase {
-            let components = s.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
-            let firstWordIsSubstantial = components.first.map { $0.count > 3 } ?? false
-
-            if firstWordIsSubstantial || originalFirstWordWasRemoved {
-                s = first.uppercased() + s.dropFirst()
-            }
+            s = first.uppercased() + s.dropFirst()
         }
         return s
     }
