@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation   // silences Sendable warning on AVAudioPCMBuffer in converter block
 import Foundation
 import Speech
 import CaptureKit
