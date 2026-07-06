@@ -93,4 +93,12 @@ struct CleanupPipelineTests {
         #expect(r.text == "" && r.providerID == "raw")
         #expect(fake.cleanCallCount == 0)
     }
+
+    @Test func fillerOnlyInputLegitimatelyCleansToEmpty() async {
+        // Not a contract violation: rules removing everything IS the feature.
+        // FlowController maps empty cleaned text to "Didn't catch that" (Task 17).
+        let p = CleanupPipeline(providers: [])
+        let r = await p.process("um uh", options: options(.light), replacements: [])
+        #expect(r.text == "" && r.providerID == "rules")
+    }
 }

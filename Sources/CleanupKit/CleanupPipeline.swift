@@ -1,7 +1,9 @@
 import Foundation
 
 /// Orchestrates: rules pass -> first working LLM provider (with timeout) -> replacements.
-/// NEVER throws; the worst case is the rules-cleaned text (spec: never block insertion).
+/// NEVER throws; provider (AI) failure can never yield less than the rules-cleaned
+/// text (spec: never block insertion on AI failure). Filler-only input may
+/// legitimately clean to empty — FlowController maps that to "Didn't catch that".
 public struct CleanupPipeline: CleanupProcessing {
     private let providers: [any CleanupProvider]
     private let timeout: TimeInterval
