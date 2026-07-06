@@ -3749,6 +3749,8 @@ git commit -m "feat(transcribe): Parakeet v3 via FluidAudio, router, CLI pipelin
 
 ### Task 17: FlowCore — FlowController (orchestrator)
 
+> **AMENDMENT (executed 2026-07-06, commits e323b1e + 143830e):** review found two Important bugs in the reference code below, fixed in the shipped version: (1) `machine` must be rebuilt from `settings.settings.handsFreeEnabled` on keyDown when idle (init-time snapshot froze the toggle); (2) `process()` sets `pipelineActive` (keyDown ignored while true — one dictation at a time) and writes phases via a `setPhase` helper that refuses to clobber `.disabled` (secure input mid-pipeline). Plus: notice() reused in the mic-failure path, `[weak self]` on the process Task, double-tap sleep reads `machine.doubleTapWindow`, history retention write change-guarded. Tests: MockTranscriber gained `delay`, Harness exposes `settings`, +3 regression tests (hands-free live toggle, secure-input-not-clobbered, second-dictation-ignored). `Sources/FlowCore/FlowController.swift` at commit 143830e is authoritative.
+
 **Files:**
 - Create: `Sources/FlowCore/FlowController.swift`
 - Test: `Tests/FlowCoreTests/FlowControllerTests.swift`
