@@ -1191,7 +1191,7 @@ git commit -m "feat(hotkey): types + pure key-event interpreter"
 
 **Interfaces:**
 - Consumes: everything from Tasks 2–4 (`RulesCleaner`, `ReplacementEngine`, `CleanupProvider`, types).
-- Produces: `CleanupPipeline(providers:timeout:)` conforming to `CleanupProcessing`. **Contract: `process` NEVER throws and never returns empty text for non-empty input** (spec §5: never block insertion on AI failure).
+- Produces: `CleanupPipeline(providers:timeout:)` conforming to `CleanupProcessing`. **Contract: `process` NEVER throws, and provider (AI) failure can never yield less than the rules-cleaned text** (spec §5: never block insertion on AI failure). Filler-only input (e.g. "um uh") legitimately rules-cleans to empty — that is the feature, not a failure; FlowController (Task 17) maps empty cleaned text to the "Didn't catch that" notice instead of inserting.
 
 Behavior matrix (spec §3): `.off` → replacements only, providerID "raw". `.light` → rules + replacements, "rules". `.standard`/`.heavy` → rules, then first available provider that succeeds within `timeout` (default 4s); its output gets replacements, providerID = provider.id; every provider failing → rules text + replacements, "rules". Replacements apply at ALL levels (explicit user intent).
 
@@ -1292,6 +1292,14 @@ struct CleanupPipelineTests {
         let r = await p.process("", options: options(.standard), replacements: replacements)
         #expect(r.text == "" && r.providerID == "raw")
         #expect(fake.cleanCallCount == 0)
+    }
+
+    @Test func fillerOnlyInputLegitimatelyCleansToEmpty() async {
+        // Not a contract violation: rules removing everything IS the feature.
+        // FlowController maps empty cleaned text to "Didn't catch that" (Task 17).
+        let p = CleanupPipeline(providers: [])
+        let r = await p.process("um uh", options: options(.light), replacements: [])
+        #expect(r.text == "" && r.providerID == "rules")
     }
 }
 ```
@@ -3809,14 +3817,14 @@ struct Harness {
     let controller: FlowController
     var clock: TimeInterval = 100
 
-    init() {
+    init(cleanup: any CleanupProcessing = EchoCleanup()) {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
         nonisolated(unsafe) var now: TimeInterval = 100
         controller = FlowController(
             hotkeys: hotkeys, capture: capture, transcriber: transcriber,
-            cleanup: EchoCleanup(), inserter: inserter,
+            cleanup: cleanup, inserter: inserter,
             settings: settings, dictionary: DictionaryStore(directory: dir), history: history,
             frontmostBundleID: { "com.apple.Notes" },
             now: { now })
@@ -3865,6 +3873,21 @@ struct FlowControllerTests {
     @Test func emptyTranscriptShowsNoticeAndInsertsNothing() async {
         let h = Harness()
         h.transcriber.result = .success(Transcript(text: "", languageHint: nil))
+        h.controller.start()
+        await h.dictate(holdFor: 0.5)
+        #expect(h.inserter.insertedTexts.isEmpty)
+        #expect(h.history.entries.isEmpty)
+        #expect(h.controller.phase == .notice("Didn't catch that"))
+    }
+    @Test func emptyCleanupResultShowsNoticeAndInsertsNothing() async {
+        // Filler-only dictation: transcript non-empty, cleaned text empty.
+        struct EmptyCleanup: CleanupProcessing {
+            func process(_ raw: String, options: CleanupOptions,
+                         replacements: [Replacement]) async -> CleanupResult {
+                CleanupResult(text: "", providerID: "rules")
+            }
+        }
+        let h = Harness(cleanup: EmptyCleanup())
         h.controller.start()
         await h.dictate(holdFor: 0.5)
         #expect(h.inserter.insertedTexts.isEmpty)
@@ -4111,6 +4134,8 @@ public final class FlowController {
                                      vocabulary: dictionary.vocabulary)
         let result = await cleanup.process(raw, options: options,
                                            replacements: dictionary.replacements)
+        // Filler-only dictation legitimately cleans to empty — never paste "".
+        guard !result.text.isEmpty else { return notice("Didn't catch that") }
 
         phase = .inserting
         let bundleID = frontmostBundleID()
