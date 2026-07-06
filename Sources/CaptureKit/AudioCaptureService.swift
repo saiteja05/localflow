@@ -110,15 +110,15 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     }
 
     public func stopCapture() async -> AudioData {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global().sync {
-                lock.lock(); defer { lock.unlock() }
-                accumulating = false
-                let samples = active
-                active = []
-                continuation.resume(returning: AudioData(samples: samples))
-            }
+        var result: AudioData!
+        DispatchQueue.global().sync {
+            lock.lock(); defer { lock.unlock() }
+            accumulating = false
+            let samples = active
+            active = []
+            result = AudioData(samples: samples)
         }
+        return result
     }
 
     public func cancelCapture() {
