@@ -40,6 +40,8 @@ let package = Package(
                     resources: [.copy("Fixtures")]),
         .testTarget(name: "InsertKitTests", dependencies: ["InsertKit"]),
         .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
-        .testTarget(name: "FlowCoreTests", dependencies: ["FlowCore"]),
+        .testTarget(name: "FlowCoreTests", dependencies: [
+            "FlowCore", "CaptureKit", "CleanupKit", "HotkeyKit", "InsertKit", "Persistence", "TranscribeKit",
+        ]),
     ]
 )
