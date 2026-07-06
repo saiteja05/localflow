@@ -110,15 +110,15 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     }
 
     public func stopCapture() async -> AudioData {
-        var result: AudioData!
-        DispatchQueue.global().sync {
-            lock.lock(); defer { lock.unlock() }
+        // NSLock.lock()/unlock() are marked unavailable inside async bodies
+        // (noasync); withLock is the sanctioned scoped equivalent. No await
+        // occurs under the lock, so this is safe.
+        lock.withLock {
             accumulating = false
             let samples = active
             active = []
-            result = AudioData(samples: samples)
+            return AudioData(samples: samples)
         }
-        return result
     }
 
     public func cancelCapture() {
