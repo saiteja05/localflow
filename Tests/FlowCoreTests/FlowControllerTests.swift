@@ -28,8 +28,12 @@ final class MockCapture: AudioCapturing, @unchecked Sendable {
 
 final class MockTranscriber: Transcriber, @unchecked Sendable {
     var result: Result<Transcript, TranscriptionError> = .success(Transcript(text: "raw words", languageHint: nil))
+    var delay: TimeInterval = 0
     func isReady() async -> Bool { true }
-    func transcribe(_ audio: AudioData) async throws -> Transcript { try result.get() }
+    func transcribe(_ audio: AudioData) async throws -> Transcript {
+        if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+        return try result.get()
+    }
 }
 
 struct EchoCleanup: CleanupProcessing {
@@ -56,6 +60,7 @@ struct Harness {
     let transcriber = MockTranscriber()
     let inserter = MockInserter()
     let history: HistoryStore
+    let settings: SettingsStore
     let controller: FlowController
     var clock: TimeInterval = 100
 
@@ -63,6 +68,7 @@ struct Harness {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
+        self.settings = settings
         nonisolated(unsafe) var now: TimeInterval = 100
         controller = FlowController(
             hotkeys: hotkeys, capture: capture, transcriber: transcriber,
@@ -193,5 +199,52 @@ struct FlowControllerTests {
         #expect(h.controller.phase == .recording(handsFree: false))
         h.hotkeys.continuation.yield(.keyUp)   // cleanup: end the session
         try? await Task.sleep(for: .milliseconds(200))
+    }
+
+    @Test func handsFreeToggleTakesEffectWithoutRestart() async {
+        let h = Harness()
+        h.controller.start()
+        var s = h.settings.settings
+        s.handsFreeEnabled = false
+        h.settings.update(s)
+        // Short tap: with hands-free disabled the tap is discarded immediately,
+        // not parked in the 0.4s double-tap window.
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(50))
+        h.nowRef(100.1)
+        h.hotkeys.continuation.yield(.keyUp)
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(h.capture.cancelCount == 1)
+        #expect(h.controller.phase == .idle)
+    }
+
+    @Test func secureInputDuringProcessingIsNotClobbered() async {
+        let h = Harness()
+        h.transcriber.delay = 0.3
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(50))
+        h.nowRef(100.5)
+        h.hotkeys.continuation.yield(.keyUp)
+        try? await Task.sleep(for: .milliseconds(100))   // pipeline in transcribe sleep
+        h.hotkeys.continuation.yield(.secureInputChanged(true))
+        try? await Task.sleep(for: .milliseconds(400))   // pipeline has finished by now
+        #expect(h.controller.phase == .disabled("Secure input active"))
+    }
+
+    @Test func secondDictationWhileProcessingIsIgnored() async {
+        let h = Harness()
+        h.transcriber.delay = 0.3
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(50))
+        h.nowRef(100.5)
+        h.hotkeys.continuation.yield(.keyUp)
+        try? await Task.sleep(for: .milliseconds(100))
+        h.hotkeys.continuation.yield(.keyDown)           // during processing
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.capture.startCount == 1)               // ignored
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(h.inserter.insertedTexts.count == 1)
     }
 }

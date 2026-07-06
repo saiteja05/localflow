@@ -42,6 +42,7 @@ public final class FlowController {
     private var capTimer: Task<Void, Never>?
     private var noticeTimer: Task<Void, Never>?
     private let sessionCap: TimeInterval
+    private var pipelineActive = false
 
     public init(hotkeys: any HotkeySource,
                 capture: any AudioCapturing,
@@ -93,7 +94,13 @@ public final class FlowController {
         if case .disabled = phase { return }   // ignore keys while disabled
 
         switch event {
-        case .keyDown:         run(machine.handle(.keyDown(now())))
+        case .keyDown:
+            guard !pipelineActive else { return }   // one dictation at a time
+            if !machine.isRecording,
+               machine.handsFreeEnabled != settings.settings.handsFreeEnabled {
+                machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
+            }
+            run(machine.handle(.keyDown(now())))
         case .keyUp:           run(machine.handle(.keyUp(now())))
         case .escapePressed:   run(machine.handle(.escape))
         case .comboCancelled:  run(machine.handle(.comboCancelled))
@@ -110,8 +117,7 @@ public final class FlowController {
                     phase = .recording(handsFree: machine.isHandsFree)
                     startCapTimer()
                 } catch {
-                    phase = .notice("Microphone unavailable")
-                    scheduleNoticeClear()
+                    notice("Microphone unavailable")
                 }
             case .discardCapture:
                 cancelTimers()
@@ -119,11 +125,12 @@ public final class FlowController {
                 phase = .idle
             case .stopAndProcess:
                 cancelTimers()
-                Task { await self.process() }
+                Task { [weak self] in await self?.process() }
             case .scheduleDoubleTapTimer:
                 doubleTapTimer?.cancel()
+                let window = machine.doubleTapWindow
                 doubleTapTimer = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(0.4))
+                    try? await Task.sleep(for: .seconds(window))
                     guard let self, !Task.isCancelled else { return }
                     self.run(self.machine.handle(.doubleTapTimerFired(self.now())))
                 }
@@ -150,8 +157,18 @@ public final class FlowController {
         capTimer?.cancel(); capTimer = nil
     }
 
+    /// Pipeline phase writes must not clobber .disabled — secure input can
+    /// engage while a dictation is still processing.
+    private func setPhase(_ p: Phase) {
+        if case .disabled = phase { return }
+        phase = p
+    }
+
     private func process() async {
-        phase = .transcribing
+        pipelineActive = true
+        defer { pipelineActive = false }
+
+        setPhase(.transcribing)
         let audio = await capture.stopCapture()
         guard audio.duration >= 0.35 else { return notice("Didn't catch that") }
 
@@ -164,7 +181,7 @@ public final class FlowController {
         let raw = transcript.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty else { return notice("Didn't catch that") }
 
-        phase = .cleaning
+        setPhase(.cleaning)
         let options = CleanupOptions(level: settings.settings.cleanupLevel,
                                      vocabulary: dictionary.vocabulary)
         let result = await cleanup.process(raw, options: options,
@@ -172,26 +189,28 @@ public final class FlowController {
         // Filler-only dictation legitimately cleans to empty — never paste "".
         guard !result.text.isEmpty else { return notice("Didn't catch that") }
 
-        phase = .inserting
+        setPhase(.inserting)
         let bundleID = frontmostBundleID()
         let outcome = await inserter.insert(result.text, bundleID: bundleID)
         lastCleanedText = result.text
 
         history.isEnabled = settings.settings.historyEnabled
-        history.retentionLimit = settings.settings.historyRetention
+        if history.retentionLimit != settings.settings.historyRetention {
+            history.retentionLimit = settings.settings.historyRetention
+        }
         history.add(HistoryEntry(timestamp: Date(), rawText: raw, cleanedText: result.text,
                                  appBundleID: bundleID, providerID: result.providerID))
 
         switch outcome {
         case .inserted:
-            phase = .idle
+            setPhase(.idle)
         case .failedTextOnClipboard:
             notice("Couldn't insert — it's on your clipboard")
         }
     }
 
     private func notice(_ message: String) {
-        phase = .notice(message)
+        setPhase(.notice(message))
         scheduleNoticeClear()
     }
 
