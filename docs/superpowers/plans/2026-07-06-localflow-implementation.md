@@ -3452,8 +3452,11 @@ import CaptureKit
 
 struct ParakeetTranscriberTests {
     @Test func tooShortAudioReturnsEmptyTranscriptNotError() async throws {
+        guard ParakeetTranscriber.modelIsDownloaded else {
+            print("SKIP: Parakeet model not downloaded"); return
+        }
         let t = ParakeetTranscriber()
-        guard await t.isReady() else { print("SKIP: Parakeet model not downloaded"); return }
+        try await t.prepare(progress: nil)   // fresh instances are .notPrepared; load the cached model
         let blip = AudioData(samples: Array(repeating: 0, count: 1000))  // < 0.3s
         let result = try await t.transcribe(blip)
         #expect(result.text.isEmpty)
