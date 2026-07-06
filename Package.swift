@@ -30,7 +30,9 @@ let package = Package(
         .target(name: "FlowCore", dependencies: [
             "CleanupKit", "HotkeyKit", "CaptureKit", "TranscribeKit", "InsertKit", "Persistence",
         ]),
-        .executableTarget(name: "localflow-cli", dependencies: ["FlowCore"]),
+        .executableTarget(name: "localflow-cli", dependencies: [
+            "FlowCore", "CaptureKit", "CleanupKit", "HotkeyKit", "InsertKit", "TranscribeKit",
+        ]),
         .testTarget(name: "CleanupKitTests", dependencies: ["CleanupKit"]),
         .testTarget(name: "HotkeyKitTests", dependencies: ["HotkeyKit"]),
         .testTarget(name: "CaptureKitTests", dependencies: ["CaptureKit"]),
