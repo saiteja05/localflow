@@ -35,9 +35,9 @@ each was judged low-impact or has a documented mitigation.
    multi-monitor setups.
 10. **Launch-at-login toggle** swallows `SMAppService` errors and never reconciles
     with `SMAppService.mainApp.status`.
-11. **Hotkey-source start failure is silent** (`try? hotkeySource.start()`) — the
-    dev-resign/TCC-churn case shows an idle icon with no explanation; should
-    surface a disabled-phase reason.
+11. ~~**Hotkey-source start failure is silent**~~ **FIXED 2026-07-07**: dead tap
+    now surfaces as a menu status line + warning icon, and a 3s watchdog
+    auto-recovers when the Accessibility grant lands (no relaunch needed).
 12. **Menu/History `ForEach` keyed by timestamp** assumes no two dictations share
     a `Date` — fine at human cadence.
 
