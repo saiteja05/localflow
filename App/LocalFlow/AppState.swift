@@ -53,7 +53,9 @@ final class AppState {
             hotkeys: hotkeySource, capture: capture, transcriber: transcriber,
             cleanup: pipeline, inserter: TextInserter(),
             settings: settingsStore, dictionary: dictionaryStore, history: historyStore,
-            liveTranscriber: SystemLiveTranscriber(locale: fallbackLocale))
+            liveTranscriber: SystemLiveTranscriber(locale: fallbackLocale),
+            transformer: pipeline,
+            selectionReader: { await SelectionReader.currentSelection() })
     }
 
     /// Idempotent: safe to re-run whenever permissions change (onboarding's

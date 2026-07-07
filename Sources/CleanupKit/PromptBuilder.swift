@@ -29,4 +29,18 @@ public enum PromptBuilder {
     public static func userPrompt(for transcript: String) -> String {
         "Transcript:\n" + transcript
     }
+
+    // MARK: edit mode (spoken instruction applied to selected text)
+
+    public static func editInstructions() -> String {
+        "You edit text according to the user's spoken instruction. "
+        + "Apply the instruction to the text faithfully. "
+        + "Change nothing beyond what the instruction requires. "
+        + "Keep the same language as the text unless told otherwise. "
+        + "Output only the edited text — no preamble, no quotes, no commentary."
+    }
+
+    public static func editUserPrompt(selection: String, instruction: String) -> String {
+        "Instruction:\n" + instruction + "\n\nText:\n" + selection
+    }
 }

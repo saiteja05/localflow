@@ -22,6 +22,17 @@ struct HUDView: View {
                         .frame(maxWidth: 380, alignment: .leading)
                 }
                 if handsFree { Text("hands-free").font(.caption2).foregroundStyle(.secondary) }
+            case .editing:
+                Circle().fill(.purple).frame(width: 9, height: 9)
+                if liveTranscript.isEmpty {
+                    Text("Speak your edit…").font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Text(liveTranscript.suffix(120))
+                        .font(.callout)
+                        .lineLimit(2)
+                        .truncationMode(.head)
+                        .frame(maxWidth: 380, alignment: .leading)
+                }
             case .transcribing, .cleaning, .inserting:
                 ProgressView().controlSize(.small)
                 Text("Processing…").font(.callout)

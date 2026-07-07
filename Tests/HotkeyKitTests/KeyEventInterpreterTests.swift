@@ -22,6 +22,13 @@ struct KeyEventInterpreterTests {
         let release = i.interpret(.flagsChanged(keyCode: KeyCodes.fn, flags: 0))
         #expect(release.event == nil)   // keyUp suppressed after cancellation
     }
+    @Test func rightOptionPressReleaseNotSwallowed() {
+        var i = KeyEventInterpreter(choice: .rightOption)
+        let down = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option))
+        #expect(down.event == .keyDown && down.swallow == false)
+        let up = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: 0))
+        #expect(up.event == .keyUp && up.swallow == false)
+    }
     @Test func rightCommandPressReleaseNotSwallowed() {
         var i = KeyEventInterpreter(choice: .rightCommand)
         let down = i.interpret(.flagsChanged(keyCode: KeyCodes.rightCommand, flags: KeyFlags.command))

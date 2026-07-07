@@ -43,6 +43,21 @@ public protocol CleanupProvider: Sendable {
     var id: String { get }
     func isAvailable() async -> Bool
     func clean(_ text: String, options: CleanupOptions) async throws -> String
+    /// Edit mode: apply a spoken instruction to selected text.
+    func transform(_ text: String, instruction: String) async throws -> String
+}
+
+public extension CleanupProvider {
+    /// Providers without edit support (e.g. rules) opt out by default.
+    func transform(_ text: String, instruction: String) async throws -> String {
+        throw CleanupError.unavailable
+    }
+}
+
+/// Edit-mode entry point consumed by FlowCore (implemented by CleanupPipeline).
+public protocol TextTransforming: Sendable {
+    /// nil when no AI provider is available — edits REQUIRE an LLM.
+    func transform(_ text: String, instruction: String) async -> String?
 }
 
 public protocol CleanupProcessing: Sendable {

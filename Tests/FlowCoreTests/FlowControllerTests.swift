@@ -65,7 +65,9 @@ struct Harness {
     var clock: TimeInterval = 100
 
     init(cleanup: any CleanupProcessing = EchoCleanup(),
-         liveTranscriber: (any LiveTranscribing)? = nil) {
+         liveTranscriber: (any LiveTranscribing)? = nil,
+         transformer: (any TextTransforming)? = nil,
+         selectionReader: (@Sendable () async -> String?)? = nil) {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
@@ -77,7 +79,9 @@ struct Harness {
             settings: settings, dictionary: DictionaryStore(directory: dir), history: history,
             frontmostBundleID: { "com.apple.Notes" },
             now: { now },
-            liveTranscriber: liveTranscriber)
+            liveTranscriber: liveTranscriber,
+            transformer: transformer,
+            selectionReader: selectionReader)
         self.nowRef = { now = $0 }
     }
     let nowRef: (TimeInterval) -> Void
@@ -295,6 +299,80 @@ struct FlowControllerTests {
         #expect(h.controller.isPaused == true)
         h.controller.setPaused(false)
         #expect(h.controller.phase == .idle)
+    }
+
+    @Test func editFlowTransformsSelectionAndInserts() async {
+        struct EchoTransformer: TextTransforming {
+            func transform(_ text: String, instruction: String) async -> String? {
+                "EDITED[\(text)|\(instruction)]"
+            }
+        }
+        let h = Harness(transformer: EchoTransformer(),
+                        selectionReader: { "Hello there, world" })
+        h.transcriber.result = .success(Transcript(text: "make it shorter", languageHint: nil))
+        h.controller.start()
+        h.nowRef(100)
+        h.hotkeys.continuation.yield(.editKeyDown)
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(h.controller.phase == .editing)
+        #expect(h.capture.startCount == 1)
+        h.nowRef(100.6)
+        h.hotkeys.continuation.yield(.editKeyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .idle = h.controller.phase { break }
+            if case .notice = h.controller.phase { break }
+        }
+        #expect(h.inserter.insertedTexts == ["EDITED[Hello there, world|make it shorter]"])
+        #expect(h.controller.phase == .idle)
+    }
+
+    @Test func editWithEmptySelectionNotices() async {
+        struct NilTransformer: TextTransforming {
+            func transform(_ text: String, instruction: String) async -> String? { nil }
+        }
+        let h = Harness(transformer: NilTransformer(), selectionReader: { nil })
+        h.controller.start()
+        h.hotkeys.continuation.yield(.editKeyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(h.capture.startCount == 0)
+        #expect(h.controller.phase == .notice("Select text first, then hold the edit key"))
+    }
+
+    @Test func editShortPressDiscards() async {
+        struct EchoTransformer: TextTransforming {
+            func transform(_ text: String, instruction: String) async -> String? { "X" }
+        }
+        let h = Harness(transformer: EchoTransformer(), selectionReader: { "some text" })
+        h.controller.start()
+        h.nowRef(100)
+        h.hotkeys.continuation.yield(.editKeyDown)
+        try? await Task.sleep(for: .milliseconds(100))
+        h.nowRef(100.1)   // < 0.3s
+        h.hotkeys.continuation.yield(.editKeyUp)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(h.inserter.insertedTexts.isEmpty)
+        #expect(h.controller.phase == .idle)
+    }
+
+    @Test func editWithoutProviderNotices() async {
+        struct NilTransformer: TextTransforming {
+            func transform(_ text: String, instruction: String) async -> String? { nil }
+        }
+        let h = Harness(transformer: NilTransformer(), selectionReader: { "selected" })
+        h.transcriber.result = .success(Transcript(text: "an instruction", languageHint: nil))
+        h.controller.start()
+        h.nowRef(100)
+        h.hotkeys.continuation.yield(.editKeyDown)
+        try? await Task.sleep(for: .milliseconds(100))
+        h.nowRef(100.6)
+        h.hotkeys.continuation.yield(.editKeyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .notice = h.controller.phase { break }
+        }
+        #expect(h.controller.phase == .notice("Edits need an AI provider — none available"))
+        #expect(h.inserter.insertedTexts.isEmpty)
     }
 
     @Test func livePreviewPublishesAndClears() async {

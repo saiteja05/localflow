@@ -25,6 +25,10 @@ your voice never leaves your Mac.
 - **Personal dictionary**: your jargon, names, and exact text replacements
 - **Per-app tone**: casual in Slack, formal in Mail — set a default tone and
   per-app overrides in Settings → AI Cleanup
+- **Live preview**: your words stream into the HUD pill as you speak
+  (display-only; the polished text lands on release)
+- **Edit mode**: select any text, hold **Right ⌥**, speak an instruction
+  ("make this more concise") — the selection is replaced by the edited text
 - **Always know the state**: the menu-bar item shows a live status line —
   "● Ready", "● Recording…", "● Processing…", or a warning naming exactly
   what's wrong and how to fix it
@@ -50,6 +54,7 @@ Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 | Hold **Fn** (default), speak, release | Dictate |
 | Double-tap, speak, tap again | Hands-free dictation |
 | **Esc** while recording | Cancel, insert nothing |
+| Select text + hold **Right ⌥**, speak, release | Edit the selection by voice |
 
 Settings → General offers **Right ⌘** or a custom modifier+key combo instead of
 Fn. Tip: set System Settings → Keyboard → "Press 🌐 key" to **Do Nothing** so

@@ -27,6 +27,9 @@ Run before every release. Mark ✅/❌ + notes. (Spec §7.)
 | Fn+←/→ while app active → cursor moves, NO dictation triggered | |
 | Globe key alone → emoji picker does NOT appear (setting: Do Nothing) | |
 | Right ⌘ hotkey mode works after switching in Settings | |
+| Live preview: words appear in the HUD pill while speaking | |
+| Edit mode: select text in Notes, hold Right ⌥, say "make this formal" → selection replaced | |
+| Edit mode with nothing selected → "Select text first" notice, nothing typed | |
 | Custom hotkey (⌘-key) held >1s → dictation completes, not cancelled by key-repeat | |
 
 ## Audio robustness

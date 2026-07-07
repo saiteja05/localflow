@@ -94,6 +94,34 @@ struct CleanupPipelineTests {
         #expect(fake.cleanCallCount == 0)
     }
 
+    @Test func transformUsesFirstAvailableProviderAndFallsThrough() async {
+        final class EditProvider: CleanupProvider, @unchecked Sendable {
+            let id: String
+            var available = true
+            var result: Result<String, CleanupError> = .success("EDITED")
+            init(id: String) { self.id = id }
+            func isAvailable() async -> Bool { available }
+            func clean(_ text: String, options: CleanupOptions) async throws -> String { text }
+            func transform(_ text: String, instruction: String) async throws -> String {
+                try result.get()
+            }
+        }
+        let failing = EditProvider(id: "apple-fm"); failing.result = .failure(.refused)
+        let working = EditProvider(id: "ollama")
+        let p = CleanupPipeline(providers: [failing, working])
+        #expect(await p.transform("text", instruction: "do it") == "EDITED")
+
+        let none = CleanupPipeline(providers: [])
+        #expect(await none.transform("text", instruction: "do it") == nil)
+    }
+
+    @Test func transformDefaultImplementationOptsOut() async {
+        // A provider without transform support (protocol default) is skipped.
+        let rulesOnly = FakeProvider(id: "fake")   // FakeProvider has no transform override
+        let p = CleanupPipeline(providers: [rulesOnly])
+        #expect(await p.transform("text", instruction: "do it") == nil)
+    }
+
     @Test func fillerOnlyInputLegitimatelyCleansToEmpty() async {
         // Not a contract violation: rules removing everything IS the feature.
         // FlowController maps empty cleaned text to "Didn't catch that" (Task 17).

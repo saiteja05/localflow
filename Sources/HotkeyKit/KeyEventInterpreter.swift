@@ -30,6 +30,9 @@ public struct KeyEventInterpreter: Sendable {
         // --- Right ⌘: flagsChanged keyCode 54. Never swallow (⌘-combos must keep working).
         case (.rightCommand, .flagsChanged(KeyCodes.rightCommand, let flags)):
             return handleModifierEdge(bitSet: flags & KeyFlags.command != 0, swallow: false)
+        // --- Right ⌥ (edit mode): flagsChanged keyCode 61. Never swallow (⌥-combos).
+        case (.rightOption, .flagsChanged(KeyCodes.rightOption, let flags)):
+            return handleModifierEdge(bitSet: flags & KeyFlags.option != 0, swallow: false)
         // --- Custom combo: plain keyDown/keyUp with required modifiers.
         case (.custom(let kc, let mods), .keyDown(let inputKc, let flags)) where inputKc == kc && flags & mods == mods && !holding:
             holding = true; cancelled = false

@@ -8,6 +8,7 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
     private let continuation: AsyncStream<HotkeyRawEvent>.Continuation
     private let lock = NSLock()
     private var interpreter: KeyEventInterpreter
+    private var editInterpreter = KeyEventInterpreter(choice: .rightOption)
     private var currentChoice: HotkeyChoice
     private var tap: CFMachPort?
     private var secureInputTimer: Timer?
@@ -103,8 +104,18 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
         }
         lock.lock()
         let output = interpreter.interpret(input)
+        let editOutput = editInterpreter.interpret(input)
         lock.unlock()
         if let e = output.event { continuation.yield(e) }
-        return output.swallow ? nil : Unmanaged.passUnretained(event)
+        // Second interpreter drives edit mode; only its hold semantics matter
+        // (escape/idle events already come from the primary interpreter).
+        switch editOutput.event {
+        case .keyDown:         continuation.yield(.editKeyDown)
+        case .keyUp:           continuation.yield(.editKeyUp)
+        case .comboCancelled:  continuation.yield(.editCancelled)
+        default:               break
+        }
+        if output.swallow || editOutput.swallow { return nil }
+        return Unmanaged.passUnretained(event)
     }
 }

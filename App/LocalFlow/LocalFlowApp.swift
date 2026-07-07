@@ -63,6 +63,7 @@ struct LocalFlowApp: App {
         case .disabled(let reason):   return "⚠︎ \(reason)"
         case .idle:                   return "● Ready — hold \(hotkeyName) to dictate"
         case .recording(let handsFree): return handsFree ? "● Recording (hands-free)…" : "● Recording…"
+        case .editing:                return "● Listening for edit…"
         case .transcribing, .cleaning, .inserting: return "● Processing…"
         case .notice(let message):    return message
         }
@@ -70,6 +71,7 @@ struct LocalFlowApp: App {
 
     private var hotkeyName: String {
         switch appState.settingsStore.settings.hotkey {
+        case .rightOption:  return "Right ⌥"   // reserved for edit mode; not offered as dictation key
         case .fnKey:        return "Fn (Globe)"
         case .rightCommand: return "Right ⌘"
         case .custom:       return "your custom hotkey"
@@ -95,7 +97,7 @@ private struct MenuBarLabel: View {
 
     private var menuIcon: String {
         switch appState.controller.phase {
-        case .recording:  return "waveform.badge.mic"
+        case .recording, .editing:  return "waveform.badge.mic"
         case .transcribing, .cleaning, .inserting: return "hourglass"
         case .disabled:   return "waveform.slash"
         case .idle, .notice: return "waveform"

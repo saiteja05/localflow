@@ -196,6 +196,23 @@ func stubbedSession() -> URLSession {
         _ = try await cleaner.clean("x", options: options)
     }
 
+    @Test func transformSendsEditPromptContract() async throws {
+        StubURLProtocol.handler = { req in
+            if req.url?.path == "/api/tags" {
+                return (200, Data(#"{"models":[{"name":"qwen3:4b-instruct"}]}"#.utf8))
+            }
+            let body = try! JSONSerialization.jsonObject(with: req.httpBody ?? Data()) as! [String: Any]
+            let messages = body["messages"] as! [[String: String]]
+            #expect(messages[0]["content"]!.contains("spoken instruction"))
+            #expect(messages[1]["content"]!.contains("Instruction:\nmake it shorter"))
+            #expect(messages[1]["content"]!.contains("Text:\nHello there, world"))
+            return (200, Data(#"{"message":{"role":"assistant","content":"Hi, world"}}"#.utf8))
+        }
+        let cleaner = OllamaCleaner(urlSession: stubbedSession())
+        let out = try await cleaner.transform("Hello there, world", instruction: "make it shorter")
+        #expect(out == "Hi, world")
+    }
+
     @Test func pullModelStreamsProgressAndCompletes() async throws {
         let ndjson = """
         {"status":"pulling manifest"}

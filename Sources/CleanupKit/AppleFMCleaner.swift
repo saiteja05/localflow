@@ -43,6 +43,16 @@ public actor AppleFMCleaner: CleanupProvider {
         return cleaned
     }
 
+    public func transform(_ text: String, instruction: String) async throws -> String {
+        let out = try await backend.respond(
+            instructions: PromptBuilder.editInstructions(),
+            prompt: PromptBuilder.editUserPrompt(selection: text, instruction: instruction),
+            temperature: 0.2)
+        let edited = out.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !edited.isEmpty else { throw CleanupError.badResponse("empty model output") }
+        return edited
+    }
+
     /// Call after launch and whenever cleanup settings change (FlowController does this).
     /// Prewarm with the caller's default tone — the session cache is keyed by
     /// the full instructions string, so a mismatched tone would miss it.

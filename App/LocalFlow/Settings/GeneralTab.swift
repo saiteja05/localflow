@@ -77,6 +77,10 @@ struct GeneralTab: View {
                     if on { try? SMAppService.mainApp.register() }
                     else { try? SMAppService.mainApp.unregister() }
                 }))
+            LabeledContent("Edit hotkey") {
+                Text("Hold Right ⌥ with text selected, speak an instruction")
+                    .foregroundStyle(.secondary)
+            }
             Text("Tip: set System Settings → Keyboard → “Press 🌐 key” to “Do Nothing” so the emoji picker never appears.")
                 .font(.caption).foregroundStyle(.secondary)
         }

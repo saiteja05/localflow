@@ -16,6 +16,7 @@ public final class FlowController {
         case disabled(String)
         case idle
         case recording(handsFree: Bool)
+        case editing            // edit hotkey held: recording a spoken instruction
         case transcribing
         case cleaning
         case inserting
@@ -42,6 +43,11 @@ public final class FlowController {
     private let now: @Sendable () -> TimeInterval
     private let liveTranscriber: (any LiveTranscribing)?
     private var liveTask: Task<Void, Never>?
+    private let transformer: (any TextTransforming)?
+    private let selectionReader: (@Sendable () async -> String?)?
+    private var editSelection: String?
+    private var editStart: TimeInterval = 0
+    private var editCapTimer: Task<Void, Never>?
 
     private var machine: GestureMachine
     private var eventTask: Task<Void, Never>?
@@ -62,7 +68,9 @@ public final class FlowController {
                 frontmostBundleID: @escaping @Sendable () -> String? = { FrontmostApp.bundleID() },
                 now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSinceReferenceDate },
                 sessionCap: TimeInterval = 600,
-                liveTranscriber: (any LiveTranscribing)? = nil) {
+                liveTranscriber: (any LiveTranscribing)? = nil,
+                transformer: (any TextTransforming)? = nil,
+                selectionReader: (@Sendable () async -> String?)? = nil) {
         self.hotkeys = hotkeys
         self.capture = capture
         self.transcriber = transcriber
@@ -75,6 +83,8 @@ public final class FlowController {
         self.now = now
         self.sessionCap = sessionCap
         self.liveTranscriber = liveTranscriber
+        self.transformer = transformer
+        self.selectionReader = selectionReader
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
     }
 
@@ -132,15 +142,19 @@ public final class FlowController {
 
         switch event {
         case .keyDown:
-            guard !pipelineActive else { return }   // one dictation at a time
+            guard !pipelineActive, phase != .editing else { return }   // one session at a time
             if !machine.isRecording,
                machine.handsFreeEnabled != settings.settings.handsFreeEnabled {
                 machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
             }
             run(machine.handle(.keyDown(now())))
         case .keyUp:           run(machine.handle(.keyUp(now())))
-        case .escapePressed:   run(machine.handle(.escape))
+        case .escapePressed:
+            if phase == .editing { cancelEdit() } else { run(machine.handle(.escape)) }
         case .comboCancelled:  run(machine.handle(.comboCancelled))
+        case .editKeyDown:     beginEdit()
+        case .editKeyUp:       finishEdit()
+        case .editCancelled:   cancelEdit()
         case .secureInputChanged: break
         }
     }
@@ -208,6 +222,90 @@ public final class FlowController {
         liveTranscript = ""
         let transcriber = liveTranscriber
         Task { await transcriber?.endSession() }
+    }
+
+    // MARK: edit mode (hold Right ⌥ with text selected, speak an instruction)
+
+    private func beginEdit() {
+        guard phase == .idle, !pipelineActive, !machine.isRecording,
+              transformer != nil, let selectionReader else { return }
+        editStart = now()
+        phase = .editing
+        Task { [weak self] in
+            guard let self else { return }
+            let selection = await selectionReader()
+            guard self.phase == .editing else { return }   // released/cancelled meanwhile
+            guard let selection, !selection.isEmpty else {
+                self.cancelEdit()
+                self.notice("Select text first, then hold the edit key")
+                return
+            }
+            self.editSelection = selection
+            do {
+                try self.capture.startCapture()
+                self.startLivePreview()
+                self.editCapTimer = Task { [weak self] in
+                    guard let self else { return }
+                    try? await Task.sleep(for: .seconds(self.sessionCap))
+                    guard !Task.isCancelled else { return }
+                    self.finishEdit()
+                }
+            } catch {
+                self.cancelEdit()
+                self.notice("Microphone unavailable")
+            }
+        }
+    }
+
+    private func finishEdit() {
+        guard phase == .editing else { return }
+        editCapTimer?.cancel(); editCapTimer = nil
+        let selection = editSelection
+        editSelection = nil
+        guard let selection, now() - editStart >= 0.3 else {
+            cancelEdit()
+            return
+        }
+        pipelineActive = true
+        Task { [weak self] in await self?.processEdit(selection: selection) }
+    }
+
+    private func cancelEdit() {
+        editCapTimer?.cancel(); editCapTimer = nil
+        editSelection = nil
+        capture.cancelCapture()
+        endLivePreview()
+        if phase == .editing { phase = .idle }
+    }
+
+    private func processEdit(selection: String) async {
+        pipelineActive = true
+        defer { pipelineActive = false }
+        setPhase(.transcribing)
+        let audio = await capture.stopCapture()
+        endLivePreview()
+        guard audio.duration >= 0.35 else { return notice("Didn't catch that") }
+        let instruction: String
+        do {
+            instruction = try await transcriber.transcribe(audio).text
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            return notice("Transcription failed")
+        }
+        guard !instruction.isEmpty else { return notice("Didn't catch that") }
+        setPhase(.cleaning)
+        guard let transformer,
+              let edited = await transformer.transform(selection, instruction: instruction) else {
+            return notice("Edits need an AI provider — none available")
+        }
+        setPhase(.inserting)
+        // Pasting replaces the active selection in every target we support.
+        let outcome = await inserter.insert(edited, bundleID: frontmostBundleID())
+        lastCleanedText = edited
+        switch outcome {
+        case .inserted:              setPhase(.idle)
+        case .failedTextOnClipboard: notice("Couldn't insert — it's on your clipboard")
+        }
     }
 
     private func startCapTimer() {

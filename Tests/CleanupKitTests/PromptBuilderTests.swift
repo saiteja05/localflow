@@ -28,6 +28,16 @@ struct PromptBuilderTests {
         #expect(PromptBuilder.userPrompt(for: "hello world") == "Transcript:\nhello world")
     }
 
+    // MARK: edit mode
+
+    @Test func editPromptsCarryInstructionAndSelection() {
+        let i = PromptBuilder.editInstructions()
+        #expect(i.contains("spoken instruction"))
+        #expect(i.contains("Output only"))
+        let u = PromptBuilder.editUserPrompt(selection: "the quick fox", instruction: "make it formal")
+        #expect(u == "Instruction:\nmake it formal\n\nText:\nthe quick fox")
+    }
+
     // MARK: tone
 
     @Test func neutralToneAddsNoDirective() {

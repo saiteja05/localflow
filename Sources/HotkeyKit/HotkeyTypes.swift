@@ -7,14 +7,18 @@ import Foundation
 public enum HotkeyChoice: Codable, Hashable, Sendable {
     case fnKey
     case rightCommand
+    case rightOption
     case custom(keyCode: UInt16, modifierRawValue: UInt64)
 }
 
 public enum HotkeyRawEvent: Sendable, Equatable {
-    case keyDown          // hotkey hold began
-    case keyUp            // hotkey hold ended
-    case comboCancelled   // another key pressed mid-hold (user meant Fn+arrow etc.)
-    case escapePressed    // Esc pressed while hotkey not held
+    case keyDown            // dictation hotkey hold began
+    case keyUp              // dictation hotkey hold ended
+    case comboCancelled     // another key pressed mid-hold (user meant Fn+arrow etc.)
+    case escapePressed      // Esc pressed while hotkey not held
+    case editKeyDown        // edit hotkey (Right ⌥) hold began
+    case editKeyUp          // edit hotkey hold ended
+    case editCancelled      // combo pressed mid-edit-hold
     case secureInputChanged(Bool)
 }
 
@@ -26,6 +30,7 @@ public protocol HotkeySource: Sendable {
 public enum KeyCodes {
     public static let fn: UInt16 = 63            // kVK_Function
     public static let rightCommand: UInt16 = 54  // kVK_RightCommand
+    public static let rightOption: UInt16 = 61   // kVK_RightOption (edit mode)
     public static let escape: UInt16 = 53        // kVK_Escape
 }
 

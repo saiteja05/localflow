@@ -123,6 +123,36 @@ public final class OllamaCleaner: CleanupProvider, @unchecked Sendable {
         return content
     }
 
+    public func transform(_ text: String, instruction: String) async throws -> String {
+        let requestModel = modelLock.withLock { _resolvedModel ?? _model }
+        let body = OllamaAPI.ChatRequest(
+            model: requestModel,
+            messages: [
+                .init(role: "system", content: PromptBuilder.editInstructions()),
+                .init(role: "user",
+                      content: PromptBuilder.editUserPrompt(selection: text, instruction: instruction)),
+            ],
+            stream: false, think: false, keep_alive: -1,
+            options: .init(temperature: 0.2))
+        var req = URLRequest(url: baseURL.appending(path: "api/chat"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(body)
+        req.timeoutInterval = max(requestTimeout, 8)   // selections can be long
+        let (data, resp): (Data, URLResponse)
+        do { (data, resp) = try await urlSession.data(for: req) }
+        catch { throw CleanupError.unavailable }
+        guard (resp as? HTTPURLResponse)?.statusCode == 200,
+              let decoded = try? JSONDecoder().decode(OllamaAPI.ChatResponse.self, from: data)
+        else { throw CleanupError.badResponse("edit request failed") }
+        let edited = decoded.message.content
+            .replacingOccurrences(of: #"^\s*<think>\s*</think>\s*"#,
+                                  with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !edited.isEmpty else { throw CleanupError.badResponse("empty content") }
+        return edited
+    }
+
     // MARK: in-app model download
 
     /// Pulls a model through Ollama's streaming API (NDJSON progress lines) so

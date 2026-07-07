@@ -47,6 +47,24 @@ public struct CleanupPipeline: CleanupProcessing {
     }
 }
 
+extension CleanupPipeline: TextTransforming {
+    /// Edit mode: first available provider wins; nil when none can serve
+    /// (edits have no rules fallback — they need semantic understanding).
+    public func transform(_ text: String, instruction: String) async -> String? {
+        for provider in providers {
+            guard await provider.isAvailable() else { continue }
+            do {
+                let out = try await withTimeout(8) {
+                    try await provider.transform(text, instruction: instruction)
+                }
+                let edited = out.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !edited.isEmpty { return edited }
+            } catch { continue }
+        }
+        return nil
+    }
+}
+
 /// Races `work` against a deadline. Throws CleanupError.timedOut on expiry.
 func withTimeout<T: Sendable>(_ seconds: TimeInterval,
                               _ work: @escaping @Sendable () async throws -> T) async throws -> T {
