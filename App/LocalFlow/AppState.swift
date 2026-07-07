@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import CaptureKit
@@ -79,5 +80,16 @@ final class AppState {
             hud = HUDPanelController(controller: controller, levels: capture.levels)
             hud?.observe()
         }
+
+        if !settingsStore.settings.onboardingCompleted
+            || !accessibilityGranted || !microphoneGranted {
+            NSApplication.shared.activate()
+            // openWindow is a View concern: post a notification the app scene observes.
+            NotificationCenter.default.post(name: .localFlowShowOnboarding, object: nil)
+        }
     }
+}
+
+extension Notification.Name {
+    static let localFlowShowOnboarding = Notification.Name("localFlowShowOnboarding")
 }

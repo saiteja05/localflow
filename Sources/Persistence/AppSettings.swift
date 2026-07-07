@@ -13,6 +13,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var historyEnabled: Bool = true
     public var historyRetention: Int = 100
     public var launchAtLogin: Bool = false
+    public var onboardingCompleted: Bool = false
 
     public init() {}
 
@@ -32,6 +33,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         historyEnabled   = (try? c.decodeIfPresent(Bool.self, forKey: .historyEnabled)).flatMap { $0 } ?? d.historyEnabled
         historyRetention = (try? c.decodeIfPresent(Int.self, forKey: .historyRetention)).flatMap { $0 } ?? d.historyRetention
         launchAtLogin    = (try? c.decodeIfPresent(Bool.self, forKey: .launchAtLogin)).flatMap { $0 } ?? d.launchAtLogin
+        onboardingCompleted = (try? c.decodeIfPresent(Bool.self, forKey: .onboardingCompleted)).flatMap { $0 } ?? d.onboardingCompleted
     }
 }
 

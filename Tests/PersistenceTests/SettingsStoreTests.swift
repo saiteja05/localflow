@@ -42,4 +42,7 @@ struct SettingsStoreTests {
         #expect(store.settings.cleanupLevel == .light)     // provided key honored
         #expect(store.settings.historyRetention == 100)    // missing keys -> defaults
     }
+    @Test func onboardingDefaultsToIncomplete() {
+        #expect(SettingsStore(directory: tempDir()).settings.onboardingCompleted == false)
+    }
 }

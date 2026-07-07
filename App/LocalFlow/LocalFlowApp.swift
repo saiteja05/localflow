@@ -17,9 +17,32 @@ struct LocalFlowApp: App {
             Button("Quit LocalFlow") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         } label: {
-            Image(systemName: menuIcon)   // Observation-tracked: re-renders on phase change
+            MenuBarLabel(appState: appState)
         }
         .menuBarExtraStyle(.menu)
+
+        Window("Welcome to LocalFlow", id: "onboarding") {
+            OnboardingView(appState: appState)
+        }
+        .windowResizability(.contentSize)
+    }
+}
+
+/// Deviation from the brief's literal snippet: `@Environment(\.openWindow)` is a
+/// property wrapper and can only be declared on a View's stored property, not as
+/// a local variable inside the MenuBarExtra `label:` @ViewBuilder closure. This
+/// helper view holds the environment value and the show-onboarding subscription
+/// instead; MenuBarExtra's label just instantiates it. Temporary until Task 22
+/// finalizes the menu.
+private struct MenuBarLabel: View {
+    @Bindable var appState: AppState
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: menuIcon)   // Observation-tracked: re-renders on phase change
+            .onReceive(NotificationCenter.default.publisher(for: .localFlowShowOnboarding)) { _ in
+                openWindow(id: "onboarding")
+            }
     }
 
     private var menuIcon: String {
