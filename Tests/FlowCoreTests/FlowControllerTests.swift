@@ -247,4 +247,16 @@ struct FlowControllerTests {
         try? await Task.sleep(for: .milliseconds(400))
         #expect(h.inserter.insertedTexts.count == 1)
     }
+
+    @Test func pauseBlocksDictationAndUnpauseRestores() async {
+        let h = Harness()
+        h.controller.start()
+        h.controller.setPaused(true)
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.capture.startCount == 0)
+        #expect(h.controller.phase == .disabled("Paused"))
+        h.controller.setPaused(false)
+        #expect(h.controller.phase == .idle)
+    }
 }

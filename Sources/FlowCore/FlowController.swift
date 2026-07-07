@@ -69,6 +69,15 @@ public final class FlowController {
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
     }
 
+    public func setPaused(_ paused: Bool) {
+        if paused {
+            if machine.isRecording { run(machine.handle(.escape)) }
+            phase = .disabled("Paused")
+        } else if phase == .disabled("Paused") {
+            phase = .idle
+        }
+    }
+
     public func start() {
         eventTask?.cancel()
         eventTask = Task { [weak self] in

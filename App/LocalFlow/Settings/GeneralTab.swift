@@ -78,5 +78,9 @@ struct GeneralTab: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .formStyle(.grouped).padding()
+        .onDisappear {
+            if let m = hotkeyMonitor { NSEvent.removeMonitor(m); hotkeyMonitor = nil }
+            recordingHotkey = false
+        }
     }
 }
