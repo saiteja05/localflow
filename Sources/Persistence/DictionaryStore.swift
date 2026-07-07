@@ -34,6 +34,7 @@ public final class DictionaryStore {
     }
     public func addReplacement(_ r: Replacement) {
         guard !r.spoken.isEmpty else { return }
+        replacements.removeAll { $0.spoken.lowercased() == r.spoken.lowercased() }
         replacements.append(r)
         save()
     }

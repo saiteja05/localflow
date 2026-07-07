@@ -38,10 +38,19 @@ struct GeneralTab: View {
                     recordingHotkey = true
                     // Local monitor: only sees events while Settings is the key window.
                     hotkeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                        // Escape cancels recording without committing any change.
+                        if event.keyCode == 53 {
+                            if let m = hotkeyMonitor { NSEvent.removeMonitor(m); hotkeyMonitor = nil }
+                            recordingHotkey = false
+                            return nil
+                        }
+                        // Require at least one modifier so a bare letter/digit/Escape can
+                        // never become a global, system-wide-swallowed hotkey.
+                        let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+                        guard !mods.isEmpty else { return nil }
                         let choice = HotkeyChoice.custom(
                             keyCode: UInt16(event.keyCode),
-                            modifierRawValue: UInt64(event.modifierFlags
-                                .intersection([.command, .option, .control, .shift]).rawValue))
+                            modifierRawValue: UInt64(mods.rawValue))
                         appState.editSettings { $0.hotkey = choice }
                         appState.hotkeySource.updateChoice(choice)
                         recordingHotkey = false
@@ -49,6 +58,11 @@ struct GeneralTab: View {
                         return nil   // swallow the keystroke
                     }
                 }
+                .disabled(recordingHotkey)
+            }
+            if recordingHotkey {
+                Text("Press a key with ⌘/⌥/⌃/⇧ — Esc cancels")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Toggle("Double-tap for hands-free mode", isOn: Binding(
                 get: { appState.settingsStore.settings.handsFreeEnabled },

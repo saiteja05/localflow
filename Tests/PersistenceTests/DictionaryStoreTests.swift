@@ -41,4 +41,11 @@ struct DictionaryStoreTests {
         #expect(throws: (any Error).self) { try store.importData(Data("nope".utf8)) }
         #expect(store.vocabulary == ["Keep"])
     }
+    @Test func addReplacementReplacesSameSpokenForm() {
+        let store = DictionaryStore(directory: tempDir())
+        store.addReplacement(Replacement(spoken: "eng standup", written: "Old"))
+        store.addReplacement(Replacement(spoken: "Eng Standup", written: "New"))
+        #expect(store.replacements.count == 1)
+        #expect(store.replacements.first?.written == "New")
+    }
 }

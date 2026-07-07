@@ -34,15 +34,17 @@ struct CleanupTab: View {
                 }
                 TextField("Ollama model", text: Binding(
                     get: { appState.settingsStore.settings.ollamaModel },
-                    set: { m in appState.editSettings { $0.ollamaModel = m } }))
+                    set: { m in
+                        appState.editSettings { $0.ollamaModel = m }
+                        appState.ollama.updateModel(m)
+                    }))
                     .help("Model tag to use when Ollama is the cleanup provider")
             }
         }
         .formStyle(.grouped).padding()
         .task {
             appleFMAvailable = await appState.appleFM.isAvailable()
-            ollamaAvailable = await OllamaCleaner(
-                model: appState.settingsStore.settings.ollamaModel).isAvailable()
+            ollamaAvailable = await appState.ollama.isAvailable()
         }
     }
 

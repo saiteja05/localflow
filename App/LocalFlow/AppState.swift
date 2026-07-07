@@ -19,6 +19,7 @@ final class AppState {
     let capture: AudioCaptureService
     let parakeet: ParakeetTranscriber
     let appleFM: AppleFMCleaner
+    let ollama: OllamaCleaner
     let hotkeySource: EventTapHotkeySource
     let controller: FlowController
     private var hud: HUDPanelController?
@@ -37,13 +38,11 @@ final class AppState {
         capture = AudioCaptureService()
         parakeet = ParakeetTranscriber()
         appleFM = AppleFMCleaner()
+        ollama = OllamaCleaner(model: settingsStore.settings.ollamaModel)
         hotkeySource = EventTapHotkeySource(choice: settingsStore.settings.hotkey)
 
         let transcriber = TranscriberRouter(primary: parakeet, fallback: SystemTranscriber())
-        let pipeline = CleanupPipeline(providers: [
-            appleFM,
-            OllamaCleaner(model: settingsStore.settings.ollamaModel),
-        ])
+        let pipeline = CleanupPipeline(providers: [appleFM, ollama])
         controller = FlowController(
             hotkeys: hotkeySource, capture: capture, transcriber: transcriber,
             cleanup: pipeline, inserter: TextInserter(),

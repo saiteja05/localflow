@@ -110,4 +110,15 @@ func stubbedSession() -> URLSession {
         StubURLProtocol.handler = { _ in (500, Data()) }
         #expect(await OllamaCleaner(urlSession: stubbedSession()).isAvailable() == false)
     }
+
+    @Test func updateModelAffectsSubsequentRequests() async throws {
+        StubURLProtocol.handler = { req in
+            let body = try! JSONSerialization.jsonObject(with: req.httpBody ?? Data()) as! [String: Any]
+            #expect(body["model"] as? String == "switched:latest")
+            return (200, Data(#"{"message":{"role":"assistant","content":"ok"}}"#.utf8))
+        }
+        let cleaner = OllamaCleaner(urlSession: stubbedSession())
+        cleaner.updateModel("switched:latest")
+        _ = try await cleaner.clean("x", options: CleanupOptions(level: .standard, vocabulary: []))
+    }
 }

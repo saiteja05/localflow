@@ -1,8 +1,12 @@
 import Foundation
 
-public final class OllamaCleaner: CleanupProvider {
+public final class OllamaCleaner: CleanupProvider, @unchecked Sendable {
     public let id = "ollama"
-    private let model: String
+    // Single mutable var guarded by a lock so the model can be updated live
+    // (from Settings) while in-flight requests keep reading a consistent value.
+    private let modelLock = NSLock()
+    private var _model: String
+    public var model: String { modelLock.withLock { _model } }
     private let baseURL: URL
     private let urlSession: URLSession
     private let requestTimeout: TimeInterval
@@ -11,10 +15,14 @@ public final class OllamaCleaner: CleanupProvider {
                 baseURL: URL = URL(string: "http://127.0.0.1:11434")!,
                 urlSession: URLSession = .shared,
                 requestTimeout: TimeInterval = 4) {
-        self.model = model
+        self._model = model
         self.baseURL = baseURL
         self.urlSession = urlSession
         self.requestTimeout = requestTimeout
+    }
+
+    public func updateModel(_ newModel: String) {
+        modelLock.withLock { _model = newModel }
     }
 
     public func isAvailable() async -> Bool {
