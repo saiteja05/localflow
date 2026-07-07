@@ -64,7 +64,8 @@ struct Harness {
     let controller: FlowController
     var clock: TimeInterval = 100
 
-    init(cleanup: any CleanupProcessing = EchoCleanup()) {
+    init(cleanup: any CleanupProcessing = EchoCleanup(),
+         liveTranscriber: (any LiveTranscribing)? = nil) {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
@@ -75,7 +76,8 @@ struct Harness {
             cleanup: cleanup, inserter: inserter,
             settings: settings, dictionary: DictionaryStore(directory: dir), history: history,
             frontmostBundleID: { "com.apple.Notes" },
-            now: { now })
+            now: { now },
+            liveTranscriber: liveTranscriber)
         self.nowRef = { now = $0 }
     }
     let nowRef: (TimeInterval) -> Void
@@ -293,6 +295,53 @@ struct FlowControllerTests {
         #expect(h.controller.isPaused == true)
         h.controller.setPaused(false)
         #expect(h.controller.phase == .idle)
+    }
+
+    @Test func livePreviewPublishesAndClears() async {
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { continuation in
+                    continuation.yield(LiveUpdate(finalizedText: "", volatileText: "hello"))
+                    continuation.yield(LiveUpdate(finalizedText: "hello world", volatileText: ""))
+                    // Left open: ends when the controller cancels the session.
+                }
+            }
+            func endSession() async {}
+        }
+        let h = Harness(liveTranscriber: ScriptedLive())
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(h.controller.liveTranscript == "hello world")   // streamed during recording
+        h.nowRef(100.5)
+        h.hotkeys.continuation.yield(.keyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .idle = h.controller.phase { break }
+        }
+        #expect(h.controller.liveTranscript == "")               // cleared after processing
+        #expect(h.inserter.insertedTexts == ["CLEANED: raw words"])  // batch path untouched
+    }
+
+    @Test func livePreviewDisabledBySettingStaysEmpty() async {
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { $0.yield(LiveUpdate(finalizedText: "nope", volatileText: "")) }
+            }
+            func endSession() async {}
+        }
+        let h = Harness(liveTranscriber: ScriptedLive())
+        var s = h.settings.settings
+        s.livePreviewEnabled = false
+        h.settings.update(s)
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(h.controller.liveTranscript == "")
+        h.hotkeys.continuation.yield(.escapePressed)
+        try? await Task.sleep(for: .milliseconds(100))
     }
 
     @Test func toneResolvesPerFrontmostApp() async {

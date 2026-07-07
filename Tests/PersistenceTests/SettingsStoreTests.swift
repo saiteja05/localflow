@@ -45,6 +45,9 @@ struct SettingsStoreTests {
     @Test func onboardingDefaultsToIncomplete() {
         #expect(SettingsStore(directory: tempDir()).settings.onboardingCompleted == false)
     }
+    @Test func livePreviewDefaultsOn() {
+        #expect(SettingsStore(directory: tempDir()).settings.livePreviewEnabled == true)
+    }
     @Test func toneDefaultsAreNeutralAndEmpty() {
         let s = SettingsStore(directory: tempDir()).settings
         #expect(s.defaultTone == .neutral)
