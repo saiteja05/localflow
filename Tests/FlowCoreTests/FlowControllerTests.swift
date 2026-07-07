@@ -259,4 +259,32 @@ struct FlowControllerTests {
         h.controller.setPaused(false)
         #expect(h.controller.phase == .idle)
     }
+
+    @Test func pauseDuringSecureInputKeepsSecureReasonAndStaysBlocked() async {
+        let h = Harness()
+        h.controller.start()
+        h.hotkeys.continuation.yield(.secureInputChanged(true))
+        try? await Task.sleep(for: .milliseconds(50))
+        h.controller.setPaused(true)
+        #expect(h.controller.phase == .disabled("Secure input active"))   // warning not masked
+        h.controller.setPaused(false)
+        #expect(h.controller.phase == .disabled("Secure input active"))   // still blocked
+        h.hotkeys.continuation.yield(.secureInputChanged(false))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.controller.phase == .idle)                              // both cleared
+    }
+
+    @Test func secureInputClearingWhilePausedStaysPaused() async {
+        let h = Harness()
+        h.controller.start()
+        h.controller.setPaused(true)
+        h.hotkeys.continuation.yield(.secureInputChanged(true))
+        try? await Task.sleep(for: .milliseconds(50))
+        h.hotkeys.continuation.yield(.secureInputChanged(false))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.controller.phase == .disabled("Paused"))                // pause survives
+        #expect(h.controller.isPaused == true)
+        h.controller.setPaused(false)
+        #expect(h.controller.phase == .idle)
+    }
 }

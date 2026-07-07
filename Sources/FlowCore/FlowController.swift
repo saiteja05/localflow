@@ -24,6 +24,8 @@ public final class FlowController {
 
     public private(set) var phase: Phase = .idle
     public private(set) var lastCleanedText: String?
+    public private(set) var isPaused = false
+    private var secureInputActive = false
 
     private let hotkeys: any HotkeySource
     private let capture: any AudioCapturing
@@ -69,13 +71,24 @@ public final class FlowController {
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
     }
 
-    public func setPaused(_ paused: Bool) {
-        if paused {
-            if machine.isRecording { run(machine.handle(.escape)) }
+    /// Secure input outranks pause in the displayed reason; the disabled state
+    /// clears only when BOTH conditions are gone.
+    private func refreshDisabledState() {
+        if secureInputActive {
+            let holder = Permissions.secureInputAppName().map { " (\($0))" } ?? ""
+            phase = .disabled("Secure input active" + holder)
+        } else if isPaused {
             phase = .disabled("Paused")
-        } else if phase == .disabled("Paused") {
+        } else if case .disabled = phase {
             phase = .idle
         }
+    }
+
+    public func setPaused(_ paused: Bool) {
+        guard paused != isPaused else { return }
+        isPaused = paused
+        if paused, machine.isRecording { run(machine.handle(.escape)) }
+        refreshDisabledState()
     }
 
     public func start() {
@@ -90,14 +103,9 @@ public final class FlowController {
 
     private func handleHotkey(_ event: HotkeyRawEvent) {
         if case .secureInputChanged(let active) = event {
-            if active {
-                if machine.isRecording { run(machine.handle(.escape)) }
-                // Name the app holding secure input when we can (spec §5).
-                let holder = Permissions.secureInputAppName().map { " (\($0))" } ?? ""
-                phase = .disabled("Secure input active" + holder)
-            } else if case .disabled = phase {
-                phase = .idle
-            }
+            secureInputActive = active
+            if active, machine.isRecording { run(machine.handle(.escape)) }
+            refreshDisabledState()
             return
         }
         if case .disabled = phase { return }   // ignore keys while disabled

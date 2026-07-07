@@ -14,7 +14,7 @@ struct LocalFlowApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            let paused = appState.controller.phase == .disabled("Paused")
+            let paused = appState.controller.isPaused
             Button(paused ? "Resume Dictation" : "Pause Dictation") {
                 appState.controller.setPaused(!paused)
             }
