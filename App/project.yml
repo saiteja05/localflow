@@ -36,5 +36,5 @@ targets:
     settings:
       base:
         ENABLE_HARDENED_RUNTIME: NO     # dev builds; release signing in Task 23
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: "LocalFlow Dev"   # stable self-signed identity: TCC grants survive rebuilds
         SWIFT_VERSION: "6.0"
