@@ -75,7 +75,12 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     private func installTap() {
         let input = engine.inputNode
         let format = input.inputFormat(forBus: 0)
-        resampler = AudioResampler(inputFormat: format)
+        let newResampler = AudioResampler(inputFormat: format)
+        // `resampler` is read on the audio render thread (ingest); every access
+        // must be lock-guarded. Lock only the assignment — never AVAudioEngine calls.
+        lock.lock()
+        resampler = newResampler
+        lock.unlock()
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
             self?.ingest(buffer)
@@ -83,12 +88,17 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     }
 
     private func rebuildTap() {
-        lock.lock(); defer { lock.unlock() }
-        installTap()
+        installTap()   // takes the lock itself for the resampler swap
         if !engine.isRunning { engine.prepare(); try? engine.start() }
     }
 
     private func ingest(_ buffer: AVAudioPCMBuffer) {
+        lock.lock()
+        let resampler = self.resampler
+        lock.unlock()
+        // process() stays OUTSIDE the lock: it is expensive and the audio thread
+        // must not hold the lock during conversion. The converter itself is only
+        // ever touched from this render thread — the race was the property.
         guard let samples = resampler?.process(buffer), !samples.isEmpty else { return }
         var rms: Float = 0
         for s in samples { rms += s * s }

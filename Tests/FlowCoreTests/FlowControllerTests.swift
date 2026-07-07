@@ -118,6 +118,13 @@ struct FlowControllerTests {
         #expect(h.controller.lastCleanedText == "CLEANED: raw words")
         #expect(h.capture.startCount == 1 && h.capture.stopCount == 1)
     }
+    @Test func callingStartTwiceStillDeliversEvents() async {
+        let h = Harness()
+        h.controller.start()
+        h.controller.start()   // must be a no-op, not kill the event stream
+        await h.dictate(holdFor: 0.5)
+        #expect(h.inserter.insertedTexts == ["CLEANED: raw words"])
+    }
     @Test func emptyTranscriptShowsNoticeAndInsertsNothing() async {
         let h = Harness()
         h.transcriber.result = .success(Transcript(text: "", languageHint: nil))

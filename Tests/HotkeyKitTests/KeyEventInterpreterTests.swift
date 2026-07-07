@@ -53,6 +53,14 @@ struct KeyEventInterpreterTests {
         let out = i.interpret(.keyDown(keyCode: KeyCodes.escape, flags: KeyFlags.secondaryFn))
         #expect(out.event == .comboCancelled)
     }
+    @Test func isHoldingTracksPressAndRelease() {
+        var i = KeyEventInterpreter(choice: .fnKey)
+        #expect(i.isHolding == false)
+        _ = i.interpret(.flagsChanged(keyCode: KeyCodes.fn, flags: KeyFlags.secondaryFn))
+        #expect(i.isHolding == true)
+        _ = i.interpret(.flagsChanged(keyCode: KeyCodes.fn, flags: 0))
+        #expect(i.isHolding == false)
+    }
     @Test func repeatedFlagsChangedWhileHeldEmitsNothing() {
         var i = KeyEventInterpreter(choice: .fnKey)
         _ = i.interpret(.flagsChanged(keyCode: KeyCodes.fn, flags: KeyFlags.secondaryFn))

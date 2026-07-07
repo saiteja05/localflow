@@ -92,7 +92,9 @@ public final class FlowController {
     }
 
     public func start() {
-        eventTask?.cancel()
+        // Idempotent: cancelling the Task that iterates the AsyncStream would
+        // terminate the stream permanently, killing hotkey delivery for good.
+        guard eventTask == nil else { return }
         eventTask = Task { [weak self] in
             guard let self else { return }
             for await event in self.hotkeys.events {
@@ -142,6 +144,9 @@ public final class FlowController {
                 phase = .idle
             case .stopAndProcess:
                 cancelTimers()
+                // Set synchronously so a keyDown arriving before the Task runs
+                // can't start a second dictation (process() re-sets + defers false).
+                pipelineActive = true
                 Task { [weak self] in await self?.process() }
             case .scheduleDoubleTapTimer:
                 doubleTapTimer?.cancel()

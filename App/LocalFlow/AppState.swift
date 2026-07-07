@@ -18,6 +18,7 @@ final class AppState {
     let historyStore: HistoryStore
     let capture: AudioCaptureService
     let parakeet: ParakeetTranscriber
+    let systemTranscriber: SystemTranscriber
     let appleFM: AppleFMCleaner
     let ollama: OllamaCleaner
     let hotkeySource: EventTapHotkeySource
@@ -41,7 +42,12 @@ final class AppState {
         ollama = OllamaCleaner(model: settingsStore.settings.ollamaModel)
         hotkeySource = EventTapHotkeySource(choice: settingsStore.settings.hotkey)
 
-        let transcriber = TranscriberRouter(primary: parakeet, fallback: SystemTranscriber())
+        // Fallback locale mirrors the user's language override so the
+        // SpeechAnalyzer fallback isn't stuck on en_US for non-English users.
+        let fallbackLocale = settingsStore.settings.languageOverride
+            .map { Locale(identifier: $0) } ?? Locale.current
+        systemTranscriber = SystemTranscriber(locale: fallbackLocale)
+        let transcriber = TranscriberRouter(primary: parakeet, fallback: systemTranscriber)
         let pipeline = CleanupPipeline(providers: [appleFM, ollama])
         controller = FlowController(
             hotkeys: hotkeySource, capture: capture, transcriber: transcriber,
@@ -49,31 +55,12 @@ final class AppState {
             settings: settingsStore, dictionary: dictionaryStore, history: historyStore)
     }
 
-    /// Idempotent: safe to re-run whenever permissions change.
+    /// Idempotent: safe to re-run whenever permissions change (onboarding's
+    /// Continue buttons call this again). Nothing user-facing waits on the
+    /// model download — heavy engine prep runs once, in the background.
     func bootstrap() async {
-        accessibilityGranted = Permissions.accessibilityGranted
-        microphoneGranted = AudioCaptureService.microphoneAuthorized
-
-        if microphoneGranted { try? capture.warmUp() }
-        if accessibilityGranted { try? hotkeySource.start() }
-        controller.start()
-
-        // Prewarm Apple FM so the first dictation's cleanup is warm (spec §2).
-        await appleFM.prewarm(options: CleanupOptions(
-            level: settingsStore.settings.cleanupLevel,
-            vocabulary: dictionaryStore.vocabulary))
-
-        // Parakeet: download in background; SpeechAnalyzer covers the meantime.
-        if !modelReady {
-            try? await parakeet.prepare { [weak self] fraction, label in
-                Task { @MainActor in
-                    self?.modelProgress = fraction
-                    self?.modelPhaseLabel = label
-                }
-            }
-            modelReady = await parakeet.isReady()
-        }
-        await parakeet.setLanguage(settingsStore.settings.languageOverride)
+        refreshPermissions()
+        controller.start()                       // idempotent
 
         if hud == nil {
             hud = HUDPanelController(controller: controller, levels: capture.levels)
@@ -85,6 +72,44 @@ final class AppState {
             NSApplication.shared.activate()
             // openWindow is a View concern: post a notification the app scene observes.
             NotificationCenter.default.post(name: .localFlowShowOnboarding, object: nil)
+        }
+
+        startEnginePreparation()
+    }
+
+    /// Re-runnable permission refresh (onboarding Continue calls bootstrap again).
+    private func refreshPermissions() {
+        accessibilityGranted = Permissions.accessibilityGranted
+        microphoneGranted = AudioCaptureService.microphoneAuthorized
+        if microphoneGranted { try? capture.warmUp() }
+        if accessibilityGranted { try? hotkeySource.start() }   // idempotent
+    }
+
+    private var enginePreparationStarted = false
+
+    /// One-shot background prep: Apple FM prewarm, SpeechAnalyzer fallback
+    /// asset (covers dictation while Parakeet downloads), then Parakeet.
+    private func startEnginePreparation() {
+        guard !enginePreparationStarted else { return }
+        enginePreparationStarted = true
+        Task { [weak self] in
+            guard let self else { return }
+            // Prewarm Apple FM so the first dictation's cleanup is warm (spec §2).
+            await self.appleFM.prewarm(options: CleanupOptions(
+                level: self.settingsStore.settings.cleanupLevel,
+                vocabulary: self.dictionaryStore.vocabulary))
+            // Fallback ready early; unsupported locale throws — acceptable,
+            // Parakeet covers shortly after.
+            try? await self.systemTranscriber.prepare()
+            try? await self.parakeet.prepare { [weak self] fraction, label in
+                Task { @MainActor in
+                    self?.modelProgress = fraction
+                    self?.modelPhaseLabel = label
+                }
+            }
+            let ready = await self.parakeet.isReady()
+            self.modelReady = ready
+            await self.parakeet.setLanguage(self.settingsStore.settings.languageOverride)
         }
     }
 }

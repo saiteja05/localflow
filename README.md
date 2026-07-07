@@ -11,7 +11,7 @@ your voice never leaves your Mac.
 2. Release.
 3. Clean text appears at your cursor: *"We should definitely ship Friday."*
 
-- **Fast**: ~0.6–1.4s from release to inserted text on Apple Silicon
+- **Fast**: targets ~0.6–1.4s from release to inserted text on Apple Silicon (design budget, not yet a measured end-to-end benchmark)
 - **Speech-to-text**: NVIDIA Parakeet v3 on the Neural Engine (25 languages, auto-detected)
 - **AI cleanup**: Apple's on-device foundation model removes fillers, fixes punctuation,
   applies self-corrections — with Ollama as an optional alternative and a rules-only fallback

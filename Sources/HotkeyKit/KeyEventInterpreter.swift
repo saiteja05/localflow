@@ -14,6 +14,10 @@ public struct KeyEventInterpreter: Sendable {
     private var holding = false
     private var cancelled = false
 
+    /// True between hotkey press and release (used by the event tap to
+    /// distinguish OS key-repeats of our held key from other keys).
+    public var isHolding: Bool { holding }
+
     public init(choice: HotkeyChoice) {
         self.choice = choice
     }

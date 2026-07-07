@@ -8,23 +8,27 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
     private let continuation: AsyncStream<HotkeyRawEvent>.Continuation
     private let lock = NSLock()
     private var interpreter: KeyEventInterpreter
+    private var currentChoice: HotkeyChoice
     private var tap: CFMachPort?
     private var secureInputTimer: Timer?
     private var lastSecureInput = false
 
     public init(choice: HotkeyChoice) {
         self.interpreter = KeyEventInterpreter(choice: choice)
+        self.currentChoice = choice
         (events, continuation) = AsyncStream.makeStream(of: HotkeyRawEvent.self)
     }
 
     public func updateChoice(_ choice: HotkeyChoice) {
         lock.lock(); defer { lock.unlock() }
         interpreter = KeyEventInterpreter(choice: choice)
+        currentChoice = choice
     }
 
     public enum TapError: Error { case creationFailed /* Accessibility not granted, usually */ }
 
     public func start() throws {
+        guard tap == nil else { return }   // idempotent: no duplicate taps or timers
         let mask: CGEventMask =
             (1 << CGEventType.keyDown.rawValue) |
             (1 << CGEventType.keyUp.rawValue) |
@@ -66,6 +70,22 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return Unmanaged.passUnretained(event)
+        }
+        // Never feed autorepeat events to the interpreter.
+        if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
+            // OS key-repeat is synthesized below the tap; the interpreter would
+            // read it as combo-cancel. Swallow repeats of our own held custom key,
+            // pass all other repeats through untouched.
+            lock.lock()
+            let holdingOurKey: Bool
+            if case .custom(let kc, _) = currentChoice, interpreter.isHolding,
+               UInt16(event.getIntegerValueField(.keyboardEventKeycode)) == kc {
+                holdingOurKey = true
+            } else {
+                holdingOurKey = false
+            }
+            lock.unlock()
+            return holdingOurKey ? nil : Unmanaged.passUnretained(event)
         }
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags.rawValue
