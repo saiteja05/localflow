@@ -52,24 +52,22 @@ final class HUDPanelController {
         let phase = controller.phase
         switch phase {
         case .idle, .disabled:
-            // Idempotent: a hide is already pending, don't reset its clock.
-            if hideTask == nil {
-                hideTask = Task { [weak self] in   // brief linger so the ✓ moment isn't jarring
-                    try? await Task.sleep(for: .milliseconds(150))
-                    guard !Task.isCancelled else { return }
-                    self?.panel.orderOut(nil)
-                    self?.hideTask = nil
-                }
+            // Each phase transition owns a fresh timer: cancel any stale hide before arming.
+            hideTask?.cancel()
+            hideTask = Task { [weak self] in   // brief linger so the ✓ moment isn't jarring
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                self?.panel.orderOut(nil)
+                self?.hideTask = nil
             }
             return
         case .notice:
-            if hideTask == nil {
-                hideTask = Task { [weak self] in
-                    try? await Task.sleep(for: .seconds(2))
-                    guard !Task.isCancelled else { return }
-                    self?.panel.orderOut(nil)
-                    self?.hideTask = nil
-                }
+            hideTask?.cancel()
+            hideTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                self?.panel.orderOut(nil)
+                self?.hideTask = nil
             }
         default:
             hideTask?.cancel()
