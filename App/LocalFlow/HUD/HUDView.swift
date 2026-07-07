@@ -4,13 +4,23 @@ import FlowCore
 struct HUDView: View {
     let phase: FlowController.Phase
     let level: Float   // 0…1 mic RMS while recording
+    var liveTranscript: String = ""
 
     var body: some View {
         HStack(spacing: 10) {
             switch phase {
             case .recording(let handsFree):
                 Circle().fill(.red).frame(width: 9, height: 9)
-                LevelBars(level: level)
+                if liveTranscript.isEmpty {
+                    LevelBars(level: level)
+                } else {
+                    // Tail of the live transcript: newest words stay visible.
+                    Text(liveTranscript.suffix(120))
+                        .font(.callout)
+                        .lineLimit(2)
+                        .truncationMode(.head)
+                        .frame(maxWidth: 380, alignment: .leading)
+                }
                 if handsFree { Text("hands-free").font(.caption2).foregroundStyle(.secondary) }
             case .transcribing, .cleaning, .inserting:
                 ProgressView().controlSize(.small)

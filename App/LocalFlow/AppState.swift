@@ -52,7 +52,8 @@ final class AppState {
         controller = FlowController(
             hotkeys: hotkeySource, capture: capture, transcriber: transcriber,
             cleanup: pipeline, inserter: TextInserter(),
-            settings: settingsStore, dictionary: dictionaryStore, history: historyStore)
+            settings: settingsStore, dictionary: dictionaryStore, history: historyStore,
+            liveTranscriber: SystemLiveTranscriber(locale: fallbackLocale))
     }
 
     /// Idempotent: safe to re-run whenever permissions change (onboarding's

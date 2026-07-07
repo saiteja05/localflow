@@ -24,6 +24,8 @@ public final class FlowController {
 
     public private(set) var phase: Phase = .idle
     public private(set) var lastCleanedText: String?
+    /// Incremental transcript shown in the HUD while recording ("" when off).
+    public private(set) var liveTranscript = ""
     public private(set) var isPaused = false
     private var secureInputActive = false
     private var hotkeyUnavailableReason: String?
@@ -38,6 +40,8 @@ public final class FlowController {
     private let history: HistoryStore
     private let frontmostBundleID: @Sendable () -> String?
     private let now: @Sendable () -> TimeInterval
+    private let liveTranscriber: (any LiveTranscribing)?
+    private var liveTask: Task<Void, Never>?
 
     private var machine: GestureMachine
     private var eventTask: Task<Void, Never>?
@@ -57,7 +61,8 @@ public final class FlowController {
                 history: HistoryStore,
                 frontmostBundleID: @escaping @Sendable () -> String? = { FrontmostApp.bundleID() },
                 now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSinceReferenceDate },
-                sessionCap: TimeInterval = 600) {
+                sessionCap: TimeInterval = 600,
+                liveTranscriber: (any LiveTranscribing)? = nil) {
         self.hotkeys = hotkeys
         self.capture = capture
         self.transcriber = transcriber
@@ -69,6 +74,7 @@ public final class FlowController {
         self.frontmostBundleID = frontmostBundleID
         self.now = now
         self.sessionCap = sessionCap
+        self.liveTranscriber = liveTranscriber
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
     }
 
@@ -147,12 +153,14 @@ public final class FlowController {
                     try capture.startCapture()
                     phase = .recording(handsFree: machine.isHandsFree)
                     startCapTimer()
+                    startLivePreview()
                 } catch {
                     notice("Microphone unavailable")
                 }
             case .discardCapture:
                 cancelTimers()
-                capture.cancelCapture()
+                capture.cancelCapture()   // finishes the live chunk stream too
+                endLivePreview()
                 phase = .idle
             case .stopAndProcess:
                 cancelTimers()
@@ -174,6 +182,32 @@ public final class FlowController {
         if machine.isRecording, case .recording = phase {
             phase = .recording(handsFree: machine.isHandsFree)
         }
+    }
+
+    /// HUD-only preview: SpeechAnalyzer streams words while the user speaks;
+    /// the inserted text still comes from the batch pass. Never blocks capture.
+    private func startLivePreview() {
+        guard settings.settings.livePreviewEnabled, let liveTranscriber else { return }
+        liveTask?.cancel()
+        liveTranscript = ""
+        let chunks = capture.makeLiveChunkStream()
+        liveTask = Task { [weak self] in
+            guard let self else { return }
+            guard await liveTranscriber.isReady() else { return }
+            let updates = await liveTranscriber.startSession(chunks: chunks)
+            for await update in updates {
+                guard !Task.isCancelled else { break }
+                self.liveTranscript = update.displayText
+            }
+        }
+    }
+
+    private func endLivePreview() {
+        liveTask?.cancel()
+        liveTask = nil
+        liveTranscript = ""
+        let transcriber = liveTranscriber
+        Task { await transcriber?.endSession() }
     }
 
     private func startCapTimer() {
@@ -207,7 +241,8 @@ public final class FlowController {
         let bundleID = frontmostBundleID()
 
         setPhase(.transcribing)
-        let audio = await capture.stopCapture()
+        let audio = await capture.stopCapture()   // finishes the live chunk stream
+        endLivePreview()
         guard audio.duration >= 0.35 else { return notice("Didn't catch that") }
 
         let transcript: Transcript

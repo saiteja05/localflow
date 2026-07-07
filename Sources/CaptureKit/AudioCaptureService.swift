@@ -13,6 +13,7 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     private var ring: RingBuffer
     private var active: [Float] = []
     private var accumulating = false
+    private var chunkContinuation: AsyncStream<[Float]>.Continuation?
     private var resampler: AudioResampler?
     private let preBufferSamples: Int
 
@@ -106,7 +107,9 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
         lock.lock()
         ring.write(samples)
         if accumulating { active.append(contentsOf: samples) }
+        let chunkSink = accumulating ? chunkContinuation : nil
         lock.unlock()
+        chunkSink?.yield(samples)
         levelContinuation.yield(rms)
     }
 
@@ -123,17 +126,37 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
         // NSLock.lock()/unlock() are marked unavailable inside async bodies
         // (noasync); withLock is the sanctioned scoped equivalent. No await
         // occurs under the lock, so this is safe.
-        lock.withLock {
+        let (audio, sink): (AudioData, AsyncStream<[Float]>.Continuation?) = lock.withLock {
             accumulating = false
             let samples = active
             active = []
-            return AudioData(samples: samples)
+            let c = chunkContinuation
+            chunkContinuation = nil
+            return (AudioData(samples: samples), c)
         }
+        sink?.finish()
+        return audio
     }
 
     public func cancelCapture() {
-        lock.lock(); defer { lock.unlock() }
+        lock.lock()
         accumulating = false
         active = []
+        let sink = chunkContinuation
+        chunkContinuation = nil
+        lock.unlock()
+        sink?.finish()
+    }
+
+    /// One live-chunk consumer per dictation; a new stream displaces (and
+    /// finishes) any previous one.
+    public func makeLiveChunkStream() -> AsyncStream<[Float]> {
+        let (stream, continuation) = AsyncStream.makeStream(of: [Float].self)
+        lock.lock()
+        let old = chunkContinuation
+        chunkContinuation = continuation
+        lock.unlock()
+        old?.finish()
+        return stream
     }
 }

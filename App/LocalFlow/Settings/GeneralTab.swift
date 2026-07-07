@@ -64,6 +64,9 @@ struct GeneralTab: View {
                 Text("Press a key with ⌘/⌥/⌃/⇧ — Esc cancels")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Toggle("Live preview while dictating", isOn: Binding(
+                get: { appState.settingsStore.settings.livePreviewEnabled },
+                set: { on in appState.editSettings { $0.livePreviewEnabled = on } }))
             Toggle("Double-tap for hands-free mode", isOn: Binding(
                 get: { appState.settingsStore.settings.handsFreeEnabled },
                 set: { on in appState.editSettings { $0.handsFreeEnabled = on } }))

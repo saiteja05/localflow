@@ -40,6 +40,7 @@ final class HUDPanelController {
     func observe() {
         withObservationTracking {
             _ = controller.phase
+            _ = controller.liveTranscript   // re-render as live words arrive
         } onChange: {
             Task { @MainActor [weak self] in
                 self?.observe()
@@ -73,7 +74,7 @@ final class HUDPanelController {
             hideTask?.cancel()
             hideTask = nil
         }
-        hosting.rootView = HUDView(phase: phase, level: level)
+        hosting.rootView = HUDView(phase: phase, level: level, liveTranscript: controller.liveTranscript)
         panel.setContentSize(hosting.fittingSize)
         position()
         panel.orderFrontRegardless()

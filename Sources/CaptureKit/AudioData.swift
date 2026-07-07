@@ -13,4 +13,14 @@ public protocol AudioCapturing: Sendable {
     func stopCapture() async -> AudioData
     func cancelCapture()
     var levels: AsyncStream<Float> { get }
+    /// Fresh per-dictation stream of 16 kHz mono chunks, live while capturing.
+    /// Call after startCapture(); the stream finishes when capture stops.
+    func makeLiveChunkStream() -> AsyncStream<[Float]>
+}
+
+public extension AudioCapturing {
+    /// Capturers without live streaming yield an immediately-finished stream.
+    func makeLiveChunkStream() -> AsyncStream<[Float]> {
+        AsyncStream { $0.finish() }
+    }
 }

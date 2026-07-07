@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation   // AVAudioConverter blocks capture non-Sendable buffers
 
 /// Converts arbitrary input PCM to the canonical 16 kHz mono Float32.
 public final class AudioResampler {
@@ -7,7 +7,6 @@ public final class AudioResampler {
         channels: 1, interleaved: false)!
 
     private let converter: AVAudioConverter
-    private var pending: AVAudioPCMBuffer?
 
     public init?(inputFormat: AVAudioFormat) {
         guard let c = AVAudioConverter(from: inputFormat, to: Self.outputFormat) else { return nil }
@@ -16,15 +15,17 @@ public final class AudioResampler {
 
     /// Streaming-safe: keeps converter state across calls (use .noDataNow, never .endOfStream).
     public func process(_ buffer: AVAudioPCMBuffer) -> [Float] {
-        pending = buffer
         let ratio = Self.outputFormat.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 64
         guard let out = AVAudioPCMBuffer(pcmFormat: Self.outputFormat, frameCapacity: capacity)
         else { return [] }
         var err: NSError?
-        let status = converter.convert(to: out, error: &err) { [weak self] _, inputStatus in
-            if let b = self?.pending {
-                self?.pending = nil
+        // Local box instead of a stored property: the @Sendable input block
+        // must not capture non-Sendable self.
+        nonisolated(unsafe) var pending: AVAudioPCMBuffer? = buffer
+        let status = converter.convert(to: out, error: &err) { _, inputStatus in
+            if let b = pending {
+                pending = nil
                 inputStatus.pointee = .haveData
                 return b
             }
