@@ -31,7 +31,7 @@ your voice never leaves your Mac.
 
 Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 
-1. Download `LocalFlow.zip` from [Releases], unzip, drag to Applications.
+1. Download `LocalFlow.zip` from [Releases](https://github.com/saiteja05/localflow/releases), unzip, drag to Applications.
 2. Unsigned build for now: `xattr -dr com.apple.quarantine /Applications/LocalFlow.app`
    (or right-click → Open).
 3. Launch. Grant **Microphone** and **Accessibility** when the onboarding asks
@@ -98,7 +98,7 @@ Cleanup intensity (Settings → AI Cleanup): **Off** (raw transcript), **Light**
 
 ```sh
 brew install xcodegen
-git clone <repo> && cd localflow
+git clone https://github.com/saiteja05/localflow.git && cd localflow
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 144 tests
 cd App && xcodegen && cd ..
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
