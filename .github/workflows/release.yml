@@ -1,0 +1,33 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+jobs:
+  build-release:
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Tests
+        run: swift test
+      - name: Build app
+        run: |
+          cd App && xcodegen && cd ..
+          xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow \
+            -configuration Release -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" build
+      - name: Zip
+        run: |
+          ditto -c -k --keepParent \
+            build/Build/Products/Release/LocalFlow.app LocalFlow.zip
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: LocalFlow.zip
+          body: |
+            Unsigned build — after unzipping, run once with:
+            `xattr -dr com.apple.quarantine LocalFlow.app` or right-click → Open.
+            (Developer ID signing + notarization planned.)
