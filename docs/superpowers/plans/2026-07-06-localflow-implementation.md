@@ -4405,6 +4405,8 @@ git commit -m "feat(app): XcodeGen menu-bar shell + composition root"
 
 ### Task 19: App — floating HUD pill
 
+> **AMENDMENT (executed 2026-07-06):** review found a Critical in the reference code below: the always-warm engine yields `levels` continuously (~25Hz), and the levels-consuming Task called `render()` unconditionally — each tick cancelled and rescheduled the pending hide task, so the HUD never hid after a dictation. Shipped fix: (1) levels ticks only render while `phase == .recording`; (2) hide scheduling is idempotent (`hideTask == nil` guard; cleared when a visible phase renders); (3) `observe()` is the single render site per phase change (no double render); (4) one persistent `NSHostingView` whose `rootView` is updated instead of per-render allocation. `App/LocalFlow/HUD/HUDPanel.swift` at the fix commit is authoritative. Known Minor (inherited): `NSScreen.main` for positioning may not track the active display on multi-monitor setups.
+
 **Files:**
 - Create: `App/LocalFlow/HUD/HUDView.swift`, `App/LocalFlow/HUD/HUDPanel.swift`
 - Modify: `App/LocalFlow/AppState.swift` (own the HUD controller, observe phase)
