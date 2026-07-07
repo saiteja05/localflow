@@ -12,29 +12,37 @@ public actor SystemTranscriber: Transcriber {
         self.locale = locale
     }
 
+    /// Resolve region-override locales (en_US@rg=inzzzz) to the equivalent
+    /// supported locale — exact identifier checks fail on them otherwise.
+    private func resolvedLocale() async -> Locale {
+        await SpeechTranscriber.supportedLocale(equivalentTo: locale) ?? locale
+    }
+
     public func isReady() async -> Bool {
+        let resolved = await resolvedLocale()
         let installed = await SpeechTranscriber.installedLocales
-        return installed.map { $0.identifier(.bcp47) }.contains(locale.identifier(.bcp47))
+        return installed.map { $0.identifier(.bcp47) }.contains(resolved.identifier(.bcp47))
     }
 
     /// Reserve the locale and download the system asset if needed (system-managed, shared).
     public func prepare() async throws {
+        let resolved = await resolvedLocale()
         let supported = await SpeechTranscriber.supportedLocales
-        guard supported.map({ $0.identifier(.bcp47) }).contains(locale.identifier(.bcp47)) else {
+        guard supported.map({ $0.identifier(.bcp47) }).contains(resolved.identifier(.bcp47)) else {
             throw TranscriptionError.modelUnavailable
         }
         let reserved = await AssetInventory.reservedLocales
-        if !reserved.map({ $0.identifier(.bcp47) }).contains(locale.identifier(.bcp47)) {
-            try await AssetInventory.reserve(locale: locale)
+        if !reserved.map({ $0.identifier(.bcp47) }).contains(resolved.identifier(.bcp47)) {
+            try await AssetInventory.reserve(locale: resolved)
         }
-        let transcriber = SpeechTranscriber(locale: locale, preset: .transcription)
+        let transcriber = SpeechTranscriber(locale: resolved, preset: .transcription)
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
             try await request.downloadAndInstall()   // fast no-op when already installed
         }
     }
 
     public func transcribe(_ audio: CaptureKit.AudioData) async throws -> Transcript {
-        let transcriber = SpeechTranscriber(locale: locale, preset: .transcription)
+        let transcriber = SpeechTranscriber(locale: await resolvedLocale(), preset: .transcription)
 
         // CRASH HAZARD (verified): the analyzer accepts ONLY 16/8 kHz mono Int16.
         // Feeding Float32 traps the process. Always convert.

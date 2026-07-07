@@ -35,3 +35,19 @@ struct LiveTranscriberTests {
         #expect(combined.contains("hello"))
     }
 }
+
+struct LocaleResolutionTests {
+    /// Regression: en_US@rg=inzzzz (US English, India region override) must
+    /// resolve to the installed en-US asset instead of silently failing.
+    @Test func regionOverrideLocaleResolvesToInstalledAsset() async {
+        let live = SystemLiveTranscriber(locale: Locale(identifier: "en_US@rg=inzzzz"))
+        let plain = SystemLiveTranscriber(locale: Locale(identifier: "en_US"))
+        guard await plain.isReady() else {
+            print("SKIP: en-US speech asset not installed"); return
+        }
+        #expect(await live.isReady() == true)
+
+        let batch = SystemTranscriber(locale: Locale(identifier: "en_US@rg=inzzzz"))
+        #expect(await batch.isReady() == true)
+    }
+}

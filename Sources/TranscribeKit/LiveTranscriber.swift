@@ -45,16 +45,25 @@ public actor SystemLiveTranscriber: LiveTranscribing {
         self.locale = locale
     }
 
+    /// Region-override locales (e.g. en_US@rg=inzzzz -> "en-US-u-rg-inzzzz")
+    /// fail exact-identifier checks against the plain "en-US" asset — always
+    /// resolve through Apple's equivalence API first.
+    private func resolvedLocale() async -> Locale {
+        await SpeechTranscriber.supportedLocale(equivalentTo: locale) ?? locale
+    }
+
     public func isReady() async -> Bool {
+        let resolved = await resolvedLocale()
         let installed = await SpeechTranscriber.installedLocales
-        return installed.map { $0.identifier(.bcp47) }.contains(locale.identifier(.bcp47))
+        return installed.map { $0.identifier(.bcp47) }.contains(resolved.identifier(.bcp47))
     }
 
     public func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
         await endSession()   // one session at a time
 
         let (updates, updateContinuation) = AsyncStream.makeStream(of: LiveUpdate.self)
-        let transcriber = SpeechTranscriber(locale: locale, preset: .progressiveTranscription)
+        let transcriber = SpeechTranscriber(locale: await resolvedLocale(),
+                                            preset: .progressiveTranscription)
 
         guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
                 compatibleWith: [transcriber]),
