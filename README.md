@@ -7,17 +7,25 @@ your voice never leaves your Mac.
 
 ## How it works
 
-1. Hold **Fn**, talk naturally ("um so we should uh no wait we should definitely ship friday")
+1. Hold the dictation key (**Fn** by default), talk naturally
+   ("um so we should uh no wait we should definitely ship friday")
 2. Release.
 3. Clean text appears at your cursor: *"We should definitely ship Friday."*
 
-- **Fast**: targets ~0.6–1.4s from release to inserted text on Apple Silicon (design budget, not yet a measured end-to-end benchmark)
-- **Speech-to-text**: NVIDIA Parakeet v3 on the Neural Engine (25 languages, auto-detected)
-- **AI cleanup**: Apple's on-device foundation model removes fillers, fixes punctuation,
-  applies self-corrections — with Ollama as an optional alternative and a rules-only fallback
-- **Hands-free mode**: double-tap Fn; tap again to finish
-- **Personal dictionary**: your jargon, names, and exact replacements
-- **Private by construction**: the only network traffic ever is the one-time model download
+- **Fast**: targets ~0.6–1.4s from release to inserted text on Apple Silicon
+  (design budget, not yet a measured end-to-end benchmark)
+- **Speech-to-text**: NVIDIA Parakeet v3 on the Neural Engine (25 languages,
+  auto-detected), with Apple's built-in SpeechAnalyzer covering the gap while
+  Parakeet downloads
+- **AI cleanup**: removes fillers, fixes punctuation, applies self-corrections
+  ("no wait, I meant…") — see [AI cleanup providers](#ai-cleanup-providers)
+- **Hands-free mode**: double-tap the dictation key; tap again to finish;
+  **Esc** cancels any recording
+- **Personal dictionary**: your jargon, names, and exact text replacements
+- **Always know the state**: the menu-bar item shows a live status line —
+  "● Ready", "● Recording…", "● Processing…", or a warning naming exactly
+  what's wrong and how to fix it
+- **Private by construction**: the only network traffic ever is model downloads
 
 ## Install
 
@@ -26,33 +34,109 @@ Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 1. Download `LocalFlow.zip` from [Releases], unzip, drag to Applications.
 2. Unsigned build for now: `xattr -dr com.apple.quarantine /Applications/LocalFlow.app`
    (or right-click → Open).
-3. Launch. Grant **Microphone** and **Accessibility** when the onboarding asks.
+3. Launch. Grant **Microphone** and **Accessibility** when the onboarding asks
+   (those are the only two permissions; Accessibility is what lets the app see
+   the hotkey and type into other apps).
 4. The speech model (~600 MB) downloads once in the background — you can dictate
    immediately via Apple's built-in model while it does.
+
+## Hotkeys
+
+| Gesture | Action |
+|---|---|
+| Hold **Fn** (default), speak, release | Dictate |
+| Double-tap, speak, tap again | Hands-free dictation |
+| **Esc** while recording | Cancel, insert nothing |
+
+Settings → General offers **Right ⌘** or a custom modifier+key combo instead of
+Fn. Tip: set System Settings → Keyboard → "Press 🌐 key" to **Do Nothing** so
+the emoji picker never fights the Fn hold.
+
+## AI cleanup providers
+
+Cleanup runs as a fall-through chain — the first available provider wins, and
+insertion is **never** blocked by AI failure (worst case you get the instant
+rules-cleaned text):
+
+1. **Apple Intelligence** (best: zero install, zero extra memory) — requires the
+   Apple Intelligence toggle in System Settings → Apple Intelligence & Siri.
+   After enabling, macOS downloads the on-device model; the Cleanup tab shows
+   the live state ("downloading — available soon" → "Available").
+2. **Ollama** (optional) — if [Ollama](https://ollama.com) is installed with
+   *any* chat-capable model, LocalFlow uses it automatically: when the
+   configured model isn't installed, it falls back to whatever is (embedding
+   models excluded) and says so in Settings → AI Cleanup. That tab can also
+   **start Ollama** for you and **download the recommended model**
+   (`qwen3:4b-instruct`, ~2.5 GB) in-app with a progress bar — no terminal needed.
+3. **Rules** (always on) — instant filler-stripping, stutter collapse,
+   capitalization. Also the offline/failure fallback and the "Light" level.
+
+Cleanup intensity (Settings → AI Cleanup): **Off** (raw transcript), **Light**
+(rules only), **Standard** (AI: fillers, punctuation, self-corrections),
+**Heavy** (AI: also grammar, run-ons, spoken lists → real lists).
+
+## Troubleshooting
+
+- **Menu says "⚠︎ Hotkey inactive — grant Accessibility"** — the event tap
+  can't start. Toggle LocalFlow in System Settings → Privacy & Security →
+  Accessibility (if the toggle looks on but dictation is dead, remove the
+  entry with **−** and re-add). The app retries every 3 seconds and recovers
+  by itself the moment the grant lands — no relaunch needed.
+- **Menu says "⚠︎ Secure input active (AppName)"** — a password field holds
+  secure keyboard entry; macOS blocks all dictation tools during it. Click out
+  of the password field and the state clears itself.
+- **Apple Intelligence row won't say "Available"** — the row shows the real
+  reason: device not supported, the toggle genuinely off (Siri alone doesn't
+  count), or the on-device model still downloading after you enabled it.
+- **Nothing inserts in one specific app** — the transcript is also left on the
+  clipboard whenever insertion fails; paste it manually and please file an
+  issue naming the app.
+- **Dictation ignores you entirely** — check the menu status line first; it
+  names the actual state (including which hotkey it's listening for).
 
 ## Build from source
 
 ```sh
 brew install xcodegen
 git clone <repo> && cd localflow
-swift test                                   # core library tests
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 144 tests
 cd App && xcodegen && cd ..
-xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow -configuration Release build
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow -configuration Release build
 ```
 
-Dev harness (no app/permissions needed): `swift run localflow-cli transcribe path/to.wav`
+Requires full Xcode 26+ (Command Line Tools alone lack the Swift Testing
+runtime). Dev harness (no app or permissions needed):
+`swift run localflow-cli transcribe path/to.wav` — also `record`, `hotkey`,
+and `insert` subcommands.
+
+**Contributor tip — stop TCC grants dying on rebuild:** ad-hoc signing gives
+every build a new identity, which invalidates the Accessibility grant. Create
+a self-signed *code signing* certificate (Keychain Access → Certificate
+Assistant, or openssl with a codeSigning EKU + `-legacy` p12 export) named
+e.g. `LocalFlow Dev`, and set `CODE_SIGN_IDENTITY` in `App/project.yml` to it.
+Grants then survive rebuilds.
 
 ## Privacy
 
-Everything — audio capture, transcription, AI cleanup, history — happens on-device.
-History is optional and stored only in `~/Library/Application Support/LocalFlow/`.
-Verify with Little Snitch: zero connections after the model download.
+Everything — audio capture, transcription, AI cleanup, history — happens
+on-device. Audio is processed in memory and discarded after each dictation.
+History is optional (Settings → History) and stored only in
+`~/Library/Application Support/LocalFlow/`. Ollama traffic never leaves
+`127.0.0.1`. Verify with Little Snitch: zero connections after model downloads.
+
+## Known issues
+
+See [docs/known-issues.md](docs/known-issues.md) for tracked follow-ups and
+[docs/manual-test-matrix.md](docs/manual-test-matrix.md) for the release
+verification checklist.
 
 ## Acknowledgements
 
 - [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) — CoreML ASR runtime
 - NVIDIA Parakeet TDT 0.6b-v3 weights (CC-BY-4.0)
 - Apple FoundationModels & SpeechAnalyzer frameworks
+- [Ollama](https://ollama.com) (optional cleanup provider)
 
 ## License
 
