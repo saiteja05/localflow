@@ -1,6 +1,10 @@
 import Foundation
 
-public enum HotkeyChoice: Codable, Equatable, Sendable {
+// Hashable (not just Equatable): SwiftUI's Settings window uses HotkeyChoice as
+// a Picker selection/tag value, which requires Hashable. All associated values
+// (UInt16, UInt64) are themselves Hashable, so this is a compiler-synthesized
+// no-op addition — no behavior change for existing Equatable-only callers.
+public enum HotkeyChoice: Codable, Hashable, Sendable {
     case fnKey
     case rightCommand
     case custom(keyCode: UInt16, modifierRawValue: UInt64)

@@ -25,6 +25,8 @@ struct LocalFlowApp: App {
             OnboardingView(appState: appState)
         }
         .windowResizability(.contentSize)
+
+        Settings { SettingsView(appState: appState) }
     }
 }
 
