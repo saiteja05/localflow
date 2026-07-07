@@ -20,6 +20,7 @@ final class AppState {
     let appleFM: AppleFMCleaner
     let hotkeySource: EventTapHotkeySource
     let controller: FlowController
+    private var hud: HUDPanelController?
 
     var modelProgress: Double = 0
     var modelPhaseLabel: String = ""
@@ -73,5 +74,10 @@ final class AppState {
             modelReady = await parakeet.isReady()
         }
         await parakeet.setLanguage(settingsStore.settings.languageOverride)
+
+        if hud == nil {
+            hud = HUDPanelController(controller: controller, levels: capture.levels)
+            hud?.observe()
+        }
     }
 }
