@@ -11,6 +11,7 @@ final class HUDPanelController {
     private let controller: FlowController
     private var level: Float = 0
     private var hideTask: Task<Void, Never>?
+    private let hosting = NSHostingView(rootView: HUDView(phase: .idle, level: 0))
 
     init(controller: FlowController, levels: AsyncStream<Float>) {
         self.controller = controller
@@ -23,8 +24,15 @@ final class HUDPanelController {
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.contentView = hosting
         Task { [weak self] in
-            for await l in levels { self?.level = l; self?.render() }
+            for await l in levels {
+                guard let self else { return }
+                self.level = l
+                // Levels tick ~25Hz for the app's entire runtime; only re-render while
+                // actually recording so idle/notice hide timers aren't perpetually reset.
+                if case .recording = self.controller.phase { self.render() }
+            }
         }
     }
 
@@ -34,7 +42,6 @@ final class HUDPanelController {
             _ = controller.phase
         } onChange: {
             Task { @MainActor [weak self] in
-                self?.render()
                 self?.observe()
             }
         }
@@ -45,25 +52,31 @@ final class HUDPanelController {
         let phase = controller.phase
         switch phase {
         case .idle, .disabled:
-            hideTask?.cancel()
-            hideTask = Task { [weak self] in   // brief linger so the ✓ moment isn't jarring
-                try? await Task.sleep(for: .milliseconds(150))
-                guard !Task.isCancelled else { return }
-                self?.panel.orderOut(nil)
+            // Idempotent: a hide is already pending, don't reset its clock.
+            if hideTask == nil {
+                hideTask = Task { [weak self] in   // brief linger so the ✓ moment isn't jarring
+                    try? await Task.sleep(for: .milliseconds(150))
+                    guard !Task.isCancelled else { return }
+                    self?.panel.orderOut(nil)
+                    self?.hideTask = nil
+                }
             }
             return
         case .notice:
-            hideTask?.cancel()
-            hideTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-                self?.panel.orderOut(nil)
+            if hideTask == nil {
+                hideTask = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(2))
+                    guard !Task.isCancelled else { return }
+                    self?.panel.orderOut(nil)
+                    self?.hideTask = nil
+                }
             }
         default:
             hideTask?.cancel()
+            hideTask = nil
         }
-        panel.contentView = NSHostingView(rootView: HUDView(phase: phase, level: level))
-        panel.setContentSize(panel.contentView!.fittingSize)
+        hosting.rootView = HUDView(phase: phase, level: level)
+        panel.setContentSize(hosting.fittingSize)
         position()
         panel.orderFrontRegardless()
     }
