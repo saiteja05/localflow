@@ -130,7 +130,8 @@ final class AppState {
             // Prewarm Apple FM so the first dictation's cleanup is warm (spec §2).
             await self.appleFM.prewarm(options: CleanupOptions(
                 level: self.settingsStore.settings.cleanupLevel,
-                vocabulary: self.dictionaryStore.vocabulary))
+                vocabulary: self.dictionaryStore.vocabulary,
+                tone: self.settingsStore.settings.defaultTone))
             // Fallback ready early; unsupported locale throws — acceptable,
             // Parakeet covers shortly after.
             try? await self.systemTranscriber.prepare()

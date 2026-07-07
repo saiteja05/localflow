@@ -45,4 +45,20 @@ struct SettingsStoreTests {
     @Test func onboardingDefaultsToIncomplete() {
         #expect(SettingsStore(directory: tempDir()).settings.onboardingCompleted == false)
     }
+    @Test func toneDefaultsAreNeutralAndEmpty() {
+        let s = SettingsStore(directory: tempDir()).settings
+        #expect(s.defaultTone == .neutral)
+        #expect(s.appTones.isEmpty)
+    }
+    @Test func appTonesPersistAcrossReload() {
+        let dir = tempDir()
+        let store = SettingsStore(directory: dir)
+        var s = store.settings
+        s.defaultTone = .casual
+        s.appTones = ["com.tinyspeck.slackmacgap": .casual, "com.apple.mail": .formal]
+        store.update(s)
+        let reloaded = SettingsStore(directory: dir).settings
+        #expect(reloaded.defaultTone == .casual)
+        #expect(reloaded.appTones["com.apple.mail"] == .formal)
+    }
 }

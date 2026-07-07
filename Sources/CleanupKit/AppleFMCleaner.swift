@@ -29,7 +29,8 @@ public actor AppleFMCleaner: CleanupProvider {
     public func clean(_ text: String, options: CleanupOptions) async throws -> String {
         let out = try await backend.respond(
             instructions: PromptBuilder.instructions(level: options.level,
-                                                     vocabulary: options.vocabulary),
+                                                     vocabulary: options.vocabulary,
+                                                     tone: options.tone),
             prompt: PromptBuilder.userPrompt(for: text),
             temperature: 0.2)
         var cleaned = out.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -43,9 +44,11 @@ public actor AppleFMCleaner: CleanupProvider {
     }
 
     /// Call after launch and whenever cleanup settings change (FlowController does this).
+    /// Prewarm with the caller's default tone — the session cache is keyed by
+    /// the full instructions string, so a mismatched tone would miss it.
     public func prewarm(options: CleanupOptions) async {
         await backend.prewarm(instructions: PromptBuilder.instructions(
-            level: options.level, vocabulary: options.vocabulary))
+            level: options.level, vocabulary: options.vocabulary, tone: options.tone))
     }
 }
 

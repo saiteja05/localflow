@@ -92,7 +92,8 @@ public final class OllamaCleaner: CleanupProvider, @unchecked Sendable {
             messages: [
                 .init(role: "system",
                       content: PromptBuilder.instructions(level: options.level,
-                                                          vocabulary: options.vocabulary)),
+                                                          vocabulary: options.vocabulary,
+                                                          tone: options.tone)),
                 .init(role: "user", content: PromptBuilder.userPrompt(for: text)),
             ],
             stream: false, think: false, keep_alive: -1,

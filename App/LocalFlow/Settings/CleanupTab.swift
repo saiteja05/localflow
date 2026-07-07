@@ -22,7 +22,8 @@ struct CleanupTab: View {
                     appState.editSettings { $0.cleanupLevel = level }
                     Task {
                         await appState.appleFM.prewarm(options: CleanupOptions(
-                            level: level, vocabulary: appState.dictionaryStore.vocabulary))
+                            level: level, vocabulary: appState.dictionaryStore.vocabulary,
+                            tone: appState.settingsStore.settings.defaultTone))
                     }
                 })) {
                 Text("Off — raw transcription").tag(CleanupLevel.off)
@@ -31,6 +32,8 @@ struct CleanupTab: View {
                 Text("Heavy — AI cleanup + grammar").tag(CleanupLevel.heavy)
             }
             .pickerStyle(.inline)
+
+            toneSection
 
             Section("Providers") {
                 appleIntelligenceRow
@@ -53,6 +56,62 @@ struct CleanupTab: View {
         if pullFraction == nil {
             ollamaStatus = await appState.ollama.status()
         }
+    }
+
+    // MARK: Tone (default + per-app overrides)
+
+    private var toneSection: some View {
+        Section("Tone") {
+            tonePicker("Default tone", selection: Binding(
+                get: { appState.settingsStore.settings.defaultTone },
+                set: { t in appState.editSettings { $0.defaultTone = t } }))
+
+            ForEach(appState.settingsStore.settings.appTones.keys.sorted(), id: \.self) { bundleID in
+                HStack {
+                    tonePicker(appDisplayName(bundleID), selection: Binding(
+                        get: { appState.settingsStore.settings.appTones[bundleID] ?? .neutral },
+                        set: { t in appState.editSettings { $0.appTones[bundleID] = t } }))
+                    Button(role: .destructive) {
+                        appState.editSettings { $0.appTones[bundleID] = nil }
+                    } label: { Image(systemName: "trash") }.buttonStyle(.borderless)
+                }
+            }
+
+            Menu("Add App Override…") {
+                ForEach(overrideCandidates, id: \.bundleID) { app in
+                    Button(app.name) {
+                        appState.editSettings { $0.appTones[app.bundleID] = .casual }
+                    }
+                }
+            }
+            Text("Dictations adapt to the app you're speaking into — e.g. casual in Slack, formal in Mail.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func tonePicker(_ label: String, selection: Binding<Tone>) -> some View {
+        Picker(label, selection: selection) {
+            Text("Casual").tag(Tone.casual)
+            Text("Neutral").tag(Tone.neutral)
+            Text("Formal").tag(Tone.formal)
+        }
+    }
+
+    /// Regular (Dock-visible) running apps without an override yet.
+    private var overrideCandidates: [(bundleID: String, name: String)] {
+        let existing = Set(appState.settingsStore.settings.appTones.keys)
+        return NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { app in
+                guard let id = app.bundleIdentifier, !existing.contains(id) else { return nil }
+                return (id, app.localizedName ?? id)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func appDisplayName(_ bundleID: String) -> String {
+        NSWorkspace.shared.runningApplications
+            .first { $0.bundleIdentifier == bundleID }?.localizedName ?? bundleID
     }
 
     // MARK: Apple Intelligence

@@ -12,8 +12,9 @@ your voice never leaves your Mac.
 2. Release.
 3. Clean text appears at your cursor: *"We should definitely ship Friday."*
 
-- **Fast**: targets ~0.6–1.4s from release to inserted text on Apple Silicon
-  (design budget, not yet a measured end-to-end benchmark)
+- **Fast** (measured, M3 Pro, warm): 0.08–0.12 s speech-to-text for a ~3 s
+  utterance + 0.35–0.7 s Apple Intelligence cleanup — ~0.8–1.2 s perceived
+  from key-release to inserted text
 - **Speech-to-text**: NVIDIA Parakeet v3 on the Neural Engine (25 languages,
   auto-detected), with Apple's built-in SpeechAnalyzer covering the gap while
   Parakeet downloads
@@ -22,6 +23,8 @@ your voice never leaves your Mac.
 - **Hands-free mode**: double-tap the dictation key; tap again to finish;
   **Esc** cancels any recording
 - **Personal dictionary**: your jargon, names, and exact text replacements
+- **Per-app tone**: casual in Slack, formal in Mail — set a default tone and
+  per-app overrides in Settings → AI Cleanup
 - **Always know the state**: the menu-bar item shows a live status line —
   "● Ready", "● Recording…", "● Processing…", or a warning naming exactly
   what's wrong and how to fix it
@@ -75,6 +78,10 @@ Cleanup intensity (Settings → AI Cleanup): **Off** (raw transcript), **Light**
 (rules only), **Standard** (AI: fillers, punctuation, self-corrections),
 **Heavy** (AI: also grammar, run-ons, spoken lists → real lists).
 
+**Tone** is resolved per dictation from the app you're speaking into: a
+per-app override if you set one, else the default (Casual / Neutral / Formal).
+Neutral adds no styling directive at all.
+
 ## Troubleshooting
 
 - **Menu says "⚠︎ Hotkey inactive — grant Accessibility"** — the event tap
@@ -99,7 +106,7 @@ Cleanup intensity (Settings → AI Cleanup): **Off** (raw transcript), **Light**
 ```sh
 brew install xcodegen
 git clone https://github.com/saiteja05/localflow.git && cd localflow
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 144 tests
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 151 tests
 cd App && xcodegen && cd ..
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow -configuration Release build

@@ -13,12 +13,20 @@ public struct Replacement: Codable, Equatable, Sendable {
     }
 }
 
+/// Writing tone applied by the LLM pass, resolvable per frontmost app
+/// (casual in Slack, formal in Mail). `.neutral` adds no directive.
+public enum Tone: String, Codable, CaseIterable, Sendable {
+    case casual, neutral, formal
+}
+
 public struct CleanupOptions: Sendable, Equatable {
     public var level: CleanupLevel
     public var vocabulary: [String]
-    public init(level: CleanupLevel, vocabulary: [String]) {
+    public var tone: Tone
+    public init(level: CleanupLevel, vocabulary: [String], tone: Tone = .neutral) {
         self.level = level
         self.vocabulary = vocabulary
+        self.tone = tone
     }
 }
 

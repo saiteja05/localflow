@@ -295,6 +295,33 @@ struct FlowControllerTests {
         #expect(h.controller.phase == .idle)
     }
 
+    @Test func toneResolvesPerFrontmostApp() async {
+        // Harness frontmost app is com.apple.Notes; override its tone.
+        final class CapturingCleanup: CleanupProcessing, @unchecked Sendable {
+            private(set) var lastOptions: CleanupOptions?
+            func process(_ raw: String, options: CleanupOptions,
+                         replacements: [Replacement]) async -> CleanupResult {
+                lastOptions = options
+                return CleanupResult(text: raw, providerID: "mock")
+            }
+        }
+        let capturing = CapturingCleanup()
+        let h = Harness(cleanup: capturing)
+        var s = h.settings.settings
+        s.defaultTone = .formal
+        s.appTones = ["com.apple.Notes": .casual]
+        h.settings.update(s)
+        h.controller.start()
+        await h.dictate(holdFor: 0.5)
+        #expect(capturing.lastOptions?.tone == .casual)      // per-app override wins
+
+        var s2 = h.settings.settings
+        s2.appTones = [:]
+        h.settings.update(s2)
+        await h.dictate(holdFor: 0.5)
+        #expect(capturing.lastOptions?.tone == .formal)      // falls back to default
+    }
+
     @Test func hotkeyUnavailabilityDisablesAndClears() async {
         let h = Harness()
         h.controller.start()

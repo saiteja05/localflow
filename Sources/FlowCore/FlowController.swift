@@ -202,6 +202,10 @@ public final class FlowController {
         pipelineActive = true
         defer { pipelineActive = false }
 
+        // Captured once: the app the user dictated into. Drives per-app tone
+        // AND the insertion strategy, so both see the same app.
+        let bundleID = frontmostBundleID()
+
         setPhase(.transcribing)
         let audio = await capture.stopCapture()
         guard audio.duration >= 0.35 else { return notice("Didn't catch that") }
@@ -216,15 +220,17 @@ public final class FlowController {
         guard !raw.isEmpty else { return notice("Didn't catch that") }
 
         setPhase(.cleaning)
+        let tone = bundleID.flatMap { settings.settings.appTones[$0] }
+            ?? settings.settings.defaultTone
         let options = CleanupOptions(level: settings.settings.cleanupLevel,
-                                     vocabulary: dictionary.vocabulary)
+                                     vocabulary: dictionary.vocabulary,
+                                     tone: tone)
         let result = await cleanup.process(raw, options: options,
                                            replacements: dictionary.replacements)
         // Filler-only dictation legitimately cleans to empty — never paste "".
         guard !result.text.isEmpty else { return notice("Didn't catch that") }
 
         setPhase(.inserting)
-        let bundleID = frontmostBundleID()
         let outcome = await inserter.insert(result.text, bundleID: bundleID)
         lastCleanedText = result.text
 
