@@ -3,11 +3,13 @@ import Testing
 
 final class MockFMBackend: FMBackend, @unchecked Sendable {
     var available = true
+    var reason: String?
     var response: Result<String, CleanupError> = .success("Cleaned.")
     private(set) var lastInstructions: String?
     private(set) var lastPrompt: String?
     private(set) var prewarmCount = 0
     func isAvailable() async -> Bool { available }
+    func unavailabilityReason() async -> String? { available ? nil : (reason ?? "off") }
     func respond(instructions: String, prompt: String, temperature: Double) async throws -> String {
         lastInstructions = instructions
         lastPrompt = prompt
@@ -53,6 +55,15 @@ struct AppleFMCleanerTests {
         let backend = MockFMBackend()
         backend.available = false
         #expect(await AppleFMCleaner(backend: backend).isAvailable() == false)
+    }
+    @Test func unavailabilityReasonSurfacesFromBackend() async {
+        let backend = MockFMBackend()
+        backend.available = false
+        backend.reason = "Turn on Apple Intelligence in System Settings"
+        let cleaner = AppleFMCleaner(backend: backend)
+        #expect(await cleaner.unavailabilityReason() == "Turn on Apple Intelligence in System Settings")
+        backend.available = true
+        #expect(await cleaner.unavailabilityReason() == nil)
     }
     @Test func prewarmForwardsBuiltInstructions() async {
         let backend = MockFMBackend()

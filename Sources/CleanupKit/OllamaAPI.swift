@@ -20,4 +20,14 @@ enum OllamaAPI {
         struct Model: Codable { var name: String }
         var models: [Model]
     }
+    struct PullRequest: Codable {
+        var model: String
+        var stream: Bool
+    }
+    struct PullProgress: Codable {
+        var status: String?
+        var total: Int64?
+        var completed: Int64?
+        var error: String?
+    }
 }

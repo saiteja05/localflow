@@ -4,6 +4,8 @@ import FoundationModels
 /// Seam so unit tests never touch the real on-device model.
 protocol FMBackend: Sendable {
     func isAvailable() async -> Bool
+    /// nil when available; otherwise a user-facing explanation of why not.
+    func unavailabilityReason() async -> String?
     /// Throws CleanupError only (maps FoundationModels errors internally).
     func respond(instructions: String, prompt: String, temperature: Double) async throws -> String
     func prewarm(instructions: String) async
@@ -17,6 +19,12 @@ public actor AppleFMCleaner: CleanupProvider {
     init(backend: any FMBackend) { self.backend = backend }
 
     public func isAvailable() async -> Bool { await backend.isAvailable() }
+
+    /// nil when available; otherwise the precise reason (device unsupported /
+    /// toggle off / model still downloading) so the UI never shows a generic hint.
+    public func unavailabilityReason() async -> String? {
+        await backend.unavailabilityReason()
+    }
 
     public func clean(_ text: String, options: CleanupOptions) async throws -> String {
         let out = try await backend.respond(
@@ -54,6 +62,21 @@ actor SystemFMBackend: FMBackend {
 
     func isAvailable() async -> Bool {
         SystemLanguageModel.default.isAvailable
+    }
+
+    func unavailabilityReason() async -> String? {
+        switch SystemLanguageModel.default.availability {
+        case .available:
+            return nil
+        case .unavailable(.deviceNotEligible):
+            return "This Mac doesn't support Apple Intelligence"
+        case .unavailable(.appleIntelligenceNotEnabled):
+            return "Turn on Apple Intelligence in System Settings"
+        case .unavailable(.modelNotReady):
+            return "Apple Intelligence model is downloading — available soon"
+        case .unavailable(let other):
+            return "Unavailable: \(String(describing: other))"
+        }
     }
 
     func prewarm(instructions: String) async {
