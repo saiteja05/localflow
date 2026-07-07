@@ -27,6 +27,11 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
 
     public enum TapError: Error { case creationFailed /* Accessibility not granted, usually */ }
 
+    /// True once the tap exists and is registered. False means hotkeys are
+    /// dead (usually: Accessibility not granted, or grant bound to a stale
+    /// code signature after a rebuild).
+    public var isRunning: Bool { tap != nil }   // main-thread create/read
+
     public func start() throws {
         guard tap == nil else { return }   // idempotent: no duplicate taps or timers
         let mask: CGEventMask =

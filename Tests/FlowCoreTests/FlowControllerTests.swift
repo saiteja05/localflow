@@ -294,4 +294,34 @@ struct FlowControllerTests {
         h.controller.setPaused(false)
         #expect(h.controller.phase == .idle)
     }
+
+    @Test func hotkeyUnavailabilityDisablesAndClears() async {
+        let h = Harness()
+        h.controller.start()
+        h.controller.setHotkeyAvailability(unavailableReason: "Hotkey inactive — grant Accessibility")
+        #expect(h.controller.phase == .disabled("Hotkey inactive — grant Accessibility"))
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.capture.startCount == 0)                                // keys ignored while dead
+        h.controller.setHotkeyAvailability(unavailableReason: nil)
+        #expect(h.controller.phase == .idle)
+    }
+
+    @Test func disabledReasonPriorityIsSecureThenUnavailableThenPaused() async {
+        let h = Harness()
+        h.controller.start()
+        h.controller.setPaused(true)
+        h.controller.setHotkeyAvailability(unavailableReason: "Hotkey inactive")
+        #expect(h.controller.phase == .disabled("Hotkey inactive"))       // outranks Paused
+        h.hotkeys.continuation.yield(.secureInputChanged(true))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.controller.phase == .disabled("Secure input active"))   // outranks both
+        h.hotkeys.continuation.yield(.secureInputChanged(false))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(h.controller.phase == .disabled("Hotkey inactive"))
+        h.controller.setHotkeyAvailability(unavailableReason: nil)
+        #expect(h.controller.phase == .disabled("Paused"))
+        h.controller.setPaused(false)
+        #expect(h.controller.phase == .idle)
+    }
 }

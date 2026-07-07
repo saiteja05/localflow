@@ -67,6 +67,16 @@ final class AppState {
             hud?.observe()
         }
 
+        // Onboarding exists to get the two permissions granted. If both are
+        // already in place, consider it done — never nag on every launch just
+        // because the user closed the window without clicking Done.
+        if !settingsStore.settings.onboardingCompleted,
+           accessibilityGranted, microphoneGranted {
+            var s = settingsStore.settings
+            s.onboardingCompleted = true
+            settingsStore.update(s)
+        }
+
         if !settingsStore.settings.onboardingCompleted
             || !accessibilityGranted || !microphoneGranted {
             NSApplication.shared.activate()
@@ -75,6 +85,7 @@ final class AppState {
         }
 
         startEnginePreparation()
+        startHotkeyWatchdog()
     }
 
     /// Re-runnable permission refresh (onboarding Continue calls bootstrap again).
@@ -83,6 +94,28 @@ final class AppState {
         microphoneGranted = AudioCaptureService.microphoneAuthorized
         if microphoneGranted { try? capture.warmUp() }
         if accessibilityGranted { try? hotkeySource.start() }   // idempotent
+        // Surface silent tap death (missing/stale Accessibility grant) instead
+        // of looking idle — and clear it the moment the tap is alive.
+        controller.setHotkeyAvailability(unavailableReason: hotkeySource.isRunning
+            ? nil
+            : "Hotkey inactive — grant Accessibility in System Settings")
+    }
+
+    private var hotkeyWatchdogStarted = false
+
+    /// Retries the event tap until it's alive (e.g. the user grants
+    /// Accessibility from System Settings without touching onboarding).
+    private func startHotkeyWatchdog() {
+        guard !hotkeyWatchdogStarted else { return }
+        hotkeyWatchdogStarted = true
+        Task { [weak self] in
+            while true {
+                guard let self else { return }
+                if self.hotkeySource.isRunning { return }
+                try? await Task.sleep(for: .seconds(3))
+                self.refreshPermissions()
+            }
+        }
     }
 
     private var enginePreparationStarted = false

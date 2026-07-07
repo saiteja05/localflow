@@ -14,6 +14,10 @@ struct LocalFlowApp: App {
 
     var body: some Scene {
         MenuBarExtra {
+            // Always-visible status line: active vs inactive must never be a mystery.
+            Text(statusLine)
+            Divider()
+
             let paused = appState.controller.isPaused
             Button(paused ? "Resume Dictation" : "Pause Dictation") {
                 appState.controller.setPaused(!paused)
@@ -37,9 +41,6 @@ struct LocalFlowApp: App {
             .disabled(appState.historyStore.entries.isEmpty)
 
             Divider()
-            if case .disabled(let reason) = appState.controller.phase, reason != "Paused" {
-                Text("⚠︎ \(reason)")
-            }
             SettingsLink { Text("Settings…") }.keyboardShortcut(",")
             Divider()
             Button("Quit LocalFlow") { NSApplication.shared.terminate(nil) }
@@ -55,6 +56,24 @@ struct LocalFlowApp: App {
         .windowResizability(.contentSize)
 
         Settings { SettingsView(appState: appState) }
+    }
+
+    private var statusLine: String {
+        switch appState.controller.phase {
+        case .disabled(let reason):   return "⚠︎ \(reason)"
+        case .idle:                   return "● Ready — hold \(hotkeyName) to dictate"
+        case .recording(let handsFree): return handsFree ? "● Recording (hands-free)…" : "● Recording…"
+        case .transcribing, .cleaning, .inserting: return "● Processing…"
+        case .notice(let message):    return message
+        }
+    }
+
+    private var hotkeyName: String {
+        switch appState.settingsStore.settings.hotkey {
+        case .fnKey:        return "Fn (Globe)"
+        case .rightCommand: return "Right ⌘"
+        case .custom:       return "your custom hotkey"
+        }
     }
 }
 

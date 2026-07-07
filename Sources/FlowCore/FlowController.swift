@@ -26,6 +26,7 @@ public final class FlowController {
     public private(set) var lastCleanedText: String?
     public private(set) var isPaused = false
     private var secureInputActive = false
+    private var hotkeyUnavailableReason: String?
 
     private let hotkeys: any HotkeySource
     private let capture: any AudioCapturing
@@ -71,12 +72,14 @@ public final class FlowController {
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
     }
 
-    /// Secure input outranks pause in the displayed reason; the disabled state
-    /// clears only when BOTH conditions are gone.
+    /// Reason priority: secure input > hotkey unavailable > paused. The
+    /// disabled state clears only when ALL conditions are gone.
     private func refreshDisabledState() {
         if secureInputActive {
             let holder = Permissions.secureInputAppName().map { " (\($0))" } ?? ""
             phase = .disabled("Secure input active" + holder)
+        } else if let reason = hotkeyUnavailableReason {
+            phase = .disabled(reason)
         } else if isPaused {
             phase = .disabled("Paused")
         } else if case .disabled = phase {
@@ -88,6 +91,15 @@ public final class FlowController {
         guard paused != isPaused else { return }
         isPaused = paused
         if paused, machine.isRecording { run(machine.handle(.escape)) }
+        refreshDisabledState()
+    }
+
+    /// The app layer reports whether the event tap is actually delivering
+    /// (nil = healthy). Surfaces the silent-tap-death failure mode: without
+    /// this, a missing Accessibility grant looks identical to idle.
+    public func setHotkeyAvailability(unavailableReason: String?) {
+        guard unavailableReason != hotkeyUnavailableReason else { return }
+        hotkeyUnavailableReason = unavailableReason
         refreshDisabledState()
     }
 
