@@ -1,0 +1,40 @@
+name: LocalFlow
+options:
+  bundleIdPrefix: dev.localflow
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  LocalFlowKit:
+    path: ..
+targets:
+  LocalFlow:
+    type: application
+    platform: macOS
+    sources: [LocalFlow]
+    dependencies:
+      - package: LocalFlowKit
+        products: [FlowCore, CleanupKit, HotkeyKit, CaptureKit, TranscribeKit, InsertKit, Persistence]
+    info:
+      path: LocalFlow/Info.plist
+      properties:
+        LSUIElement: true                # menu bar agent: no Dock icon
+        CFBundleDisplayName: LocalFlow
+        CFBundleShortVersionString: "0.1.0"
+        NSMicrophoneUsageDescription: >-
+          LocalFlow records audio only while you hold the dictation key and
+          transcribes it entirely on this Mac. Nothing is sent anywhere.
+    entitlements:
+      path: LocalFlow.entitlements   # checked-in file (Step 2), relative to App/
+      properties:
+        com.apple.security.device.audio-input: true
+        # NOTE (deviation from brief): xcodegen regenerates the entitlements
+        # file from these `properties` on every `xcodegen` run, clobbering
+        # whatever is checked in at `path` (it wrote an empty <dict/> here
+        # the first time, dropping the audio-input key). Mirroring the
+        # entitlement here keeps the regenerated file identical to the
+        # checked-in one, so there's no drift.
+    settings:
+      base:
+        ENABLE_HARDENED_RUNTIME: NO     # dev builds; release signing in Task 23
+        CODE_SIGN_IDENTITY: "-"
+        SWIFT_VERSION: "6.0"
