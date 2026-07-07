@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+DerivedData/
+build-app/
+*.xcodeproj
+.DS_Store
+App/LocalFlow/Resources/Generated/
+App/LocalFlow/Info.plist
+.superpowers/

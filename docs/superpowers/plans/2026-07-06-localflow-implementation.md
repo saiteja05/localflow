@@ -369,17 +369,19 @@ struct RulesCleanerTests {
         #expect(RulesCleaner.clean("Um, let's go") == "Let's go")
     }
     @Test func stripsFillerWithTrailingComma() {
-        #expect(RulesCleaner.clean("so, um, the plan works") == "so, the plan works")
+        #expect(RulesCleaner.clean("so, um, the plan works") == "So, the plan works")
     }
     @Test func stripsYouKnowAtClauseBoundary() {
-        #expect(RulesCleaner.clean("it works, you know, most days") == "it works, most days")
+        #expect(RulesCleaner.clean("it works, you know, most days") == "It works, most days")
         #expect(RulesCleaner.clean("You know, it works") == "It works")
     }
     @Test func keepsYouKnowMidClause() {
-        #expect(RulesCleaner.clean("do you know the answer") == "do you know the answer")
+        // First letter still gets capitalized (that rule is unconditional);
+        // the point here is that mid-clause "you know" is NOT stripped.
+        #expect(RulesCleaner.clean("do you know the answer") == "Do you know the answer")
     }
     @Test func collapsesImmediateWordRepetition() {
-        #expect(RulesCleaner.clean("the the plan is is ready") == "the plan is ready")
+        #expect(RulesCleaner.clean("the the plan is is ready") == "The plan is ready")
     }
     @Test func repetitionCollapseIsCaseInsensitiveKeepsFirst() {
         #expect(RulesCleaner.clean("The the plan") == "The plan")
@@ -1189,7 +1191,7 @@ git commit -m "feat(hotkey): types + pure key-event interpreter"
 
 **Interfaces:**
 - Consumes: everything from Tasks 2–4 (`RulesCleaner`, `ReplacementEngine`, `CleanupProvider`, types).
-- Produces: `CleanupPipeline(providers:timeout:)` conforming to `CleanupProcessing`. **Contract: `process` NEVER throws and never returns empty text for non-empty input** (spec §5: never block insertion on AI failure).
+- Produces: `CleanupPipeline(providers:timeout:)` conforming to `CleanupProcessing`. **Contract: `process` NEVER throws, and provider (AI) failure can never yield less than the rules-cleaned text** (spec §5: never block insertion on AI failure). Filler-only input (e.g. "um uh") legitimately rules-cleans to empty — that is the feature, not a failure; FlowController (Task 17) maps empty cleaned text to the "Didn't catch that" notice instead of inserting.
 
 Behavior matrix (spec §3): `.off` → replacements only, providerID "raw". `.light` → rules + replacements, "rules". `.standard`/`.heavy` → rules, then first available provider that succeeds within `timeout` (default 4s); its output gets replacements, providerID = provider.id; every provider failing → rules text + replacements, "rules". Replacements apply at ALL levels (explicit user intent).
 
@@ -1290,6 +1292,14 @@ struct CleanupPipelineTests {
         let r = await p.process("", options: options(.standard), replacements: replacements)
         #expect(r.text == "" && r.providerID == "raw")
         #expect(fake.cleanCallCount == 0)
+    }
+
+    @Test func fillerOnlyInputLegitimatelyCleansToEmpty() async {
+        // Not a contract violation: rules removing everything IS the feature.
+        // FlowController maps empty cleaned text to "Didn't catch that" (Task 17).
+        let p = CleanupPipeline(providers: [])
+        let r = await p.process("um uh", options: options(.light), replacements: [])
+        #expect(r.text == "" && r.providerID == "rules")
     }
 }
 ```
@@ -1544,8 +1554,12 @@ struct AudioFileLoaderTests {
             .appending(path: "loader-test-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: url) }
         let buffer = makeSineBuffer(sampleRate: 44_100, channels: 1)
-        let file = try AVAudioFile(forWriting: url, settings: buffer.format.settings)
-        try file.write(from: buffer)
+        do {
+            // Scope the writer: AVAudioFile flushes its header on deallocation,
+            // so it must die before we read the file back.
+            let file = try AVAudioFile(forWriting: url, settings: buffer.format.settings)
+            try file.write(from: buffer)
+        }
 
         let audio = try AudioFileLoader.load(url: url)
         #expect(abs(audio.duration - 0.5) < 0.05)
@@ -3141,7 +3155,7 @@ Add `import CaptureKit` at the top (for `AudioData` in the protocol).
 - [ ] **Step 6: Write SystemTranscriber.swift**
 
 ```swift
-import AVFoundation
+@preconcurrency import AVFoundation   // silences Sendable warning on AVAudioPCMBuffer in converter block
 import Foundation
 import Speech
 import CaptureKit
@@ -3380,11 +3394,15 @@ public final class AudioCaptureService: AudioCapturing, @unchecked Sendable {
     }
 
     public func stopCapture() async -> AudioData {
-        lock.lock(); defer { lock.unlock() }
-        accumulating = false
-        let samples = active
-        active = []
-        return AudioData(samples: samples)
+        // NSLock.lock()/unlock() are marked unavailable inside async bodies
+        // (noasync); withLock is the sanctioned scoped equivalent. No await
+        // occurs under the lock, so this is safe.
+        lock.withLock {
+            accumulating = false
+            let samples = active
+            active = []
+            return AudioData(samples: samples)
+        }
     }
 
     public func cancelCapture() {
@@ -3434,8 +3452,11 @@ import CaptureKit
 
 struct ParakeetTranscriberTests {
     @Test func tooShortAudioReturnsEmptyTranscriptNotError() async throws {
+        guard ParakeetTranscriber.modelIsDownloaded else {
+            print("SKIP: Parakeet model not downloaded"); return
+        }
         let t = ParakeetTranscriber()
-        guard await t.isReady() else { print("SKIP: Parakeet model not downloaded"); return }
+        try await t.prepare(progress: nil)   // fresh instances are .notPrepared; load the cached model
         let blip = AudioData(samples: Array(repeating: 0, count: 1000))  // < 0.3s
         let result = try await t.transcribe(blip)
         #expect(result.text.isEmpty)
@@ -3728,6 +3749,8 @@ git commit -m "feat(transcribe): Parakeet v3 via FluidAudio, router, CLI pipelin
 
 ### Task 17: FlowCore — FlowController (orchestrator)
 
+> **AMENDMENT (executed 2026-07-06, commits e323b1e + 143830e):** review found two Important bugs in the reference code below, fixed in the shipped version: (1) `machine` must be rebuilt from `settings.settings.handsFreeEnabled` on keyDown when idle (init-time snapshot froze the toggle); (2) `process()` sets `pipelineActive` (keyDown ignored while true — one dictation at a time) and writes phases via a `setPhase` helper that refuses to clobber `.disabled` (secure input mid-pipeline). Plus: notice() reused in the mic-failure path, `[weak self]` on the process Task, double-tap sleep reads `machine.doubleTapWindow`, history retention write change-guarded. Tests: MockTranscriber gained `delay`, Harness exposes `settings`, +3 regression tests (hands-free live toggle, secure-input-not-clobbered, second-dictation-ignored). `Sources/FlowCore/FlowController.swift` at commit 143830e is authoritative.
+
 **Files:**
 - Create: `Sources/FlowCore/FlowController.swift`
 - Test: `Tests/FlowCoreTests/FlowControllerTests.swift`
@@ -3807,14 +3830,14 @@ struct Harness {
     let controller: FlowController
     var clock: TimeInterval = 100
 
-    init() {
+    init(cleanup: any CleanupProcessing = EchoCleanup()) {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
         nonisolated(unsafe) var now: TimeInterval = 100
         controller = FlowController(
             hotkeys: hotkeys, capture: capture, transcriber: transcriber,
-            cleanup: EchoCleanup(), inserter: inserter,
+            cleanup: cleanup, inserter: inserter,
             settings: settings, dictionary: DictionaryStore(directory: dir), history: history,
             frontmostBundleID: { "com.apple.Notes" },
             now: { now })
@@ -3863,6 +3886,21 @@ struct FlowControllerTests {
     @Test func emptyTranscriptShowsNoticeAndInsertsNothing() async {
         let h = Harness()
         h.transcriber.result = .success(Transcript(text: "", languageHint: nil))
+        h.controller.start()
+        await h.dictate(holdFor: 0.5)
+        #expect(h.inserter.insertedTexts.isEmpty)
+        #expect(h.history.entries.isEmpty)
+        #expect(h.controller.phase == .notice("Didn't catch that"))
+    }
+    @Test func emptyCleanupResultShowsNoticeAndInsertsNothing() async {
+        // Filler-only dictation: transcript non-empty, cleaned text empty.
+        struct EmptyCleanup: CleanupProcessing {
+            func process(_ raw: String, options: CleanupOptions,
+                         replacements: [Replacement]) async -> CleanupResult {
+                CleanupResult(text: "", providerID: "rules")
+            }
+        }
+        let h = Harness(cleanup: EmptyCleanup())
         h.controller.start()
         await h.dictate(holdFor: 0.5)
         #expect(h.inserter.insertedTexts.isEmpty)
@@ -4109,6 +4147,8 @@ public final class FlowController {
                                      vocabulary: dictionary.vocabulary)
         let result = await cleanup.process(raw, options: options,
                                            replacements: dictionary.replacements)
+        // Filler-only dictation legitimately cleans to empty — never paste "".
+        guard !result.text.isEmpty else { return notice("Didn't catch that") }
 
         phase = .inserting
         let bundleID = frontmostBundleID()
@@ -4364,6 +4404,8 @@ git commit -m "feat(app): XcodeGen menu-bar shell + composition root"
 ---
 
 ### Task 19: App — floating HUD pill
+
+> **AMENDMENT (executed 2026-07-06):** review found a Critical in the reference code below: the always-warm engine yields `levels` continuously (~25Hz), and the levels-consuming Task called `render()` unconditionally — each tick cancelled and rescheduled the pending hide task, so the HUD never hid after a dictation. Shipped fix: (1) levels ticks only render while `phase == .recording`; (2) hide scheduling is idempotent (`hideTask == nil` guard; cleared when a visible phase renders); (3) `observe()` is the single render site per phase change (no double render); (4) one persistent `NSHostingView` whose `rootView` is updated instead of per-render allocation. `App/LocalFlow/HUD/HUDPanel.swift` at the fix commit is authoritative. Known Minor (inherited): `NSScreen.main` for positioning may not track the active display on multi-monitor setups.
 
 **Files:**
 - Create: `App/LocalFlow/HUD/HUDView.swift`, `App/LocalFlow/HUD/HUDPanel.swift`
