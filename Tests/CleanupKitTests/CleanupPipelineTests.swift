@@ -115,6 +115,31 @@ struct CleanupPipelineTests {
         #expect(await none.transform("text", instruction: "do it") == nil)
     }
 
+    @Test func transformRejectsPreambleViolatingOutputAndFallsThrough() async {
+        final class EditProvider: CleanupProvider, @unchecked Sendable {
+            let id: String
+            var result: Result<String, CleanupError>
+            init(id: String, result: Result<String, CleanupError>) { self.id = id; self.result = result }
+            func isAvailable() async -> Bool { true }
+            func clean(_ text: String, options: CleanupOptions) async throws -> String { text }
+            func transform(_ text: String, instruction: String) async throws -> String { try result.get() }
+        }
+        // Reproduces the real incident: model narrates a fabricated,
+        // unrelated reply instead of editing the actual selection.
+        let hallucinating = EditProvider(id: "apple-fm", result: .success(
+            "Sure, here is a softer version of the transcript: 'Hello everyone, my name is...'"))
+        let working = EditProvider(id: "ollama", result: .success(
+            "Hi @jyan, great news — both items are done!"))
+        let p = CleanupPipeline(providers: [hallucinating, working])
+        let edited = await p.transform(
+            "Hi @jyan, great news both items we discussed are done!",
+            instruction: "make the tone softer")
+        #expect(edited == "Hi @jyan, great news — both items are done!")
+
+        let onlyHallucinating = CleanupPipeline(providers: [hallucinating])
+        #expect(await onlyHallucinating.transform("text", instruction: "do it") == nil)
+    }
+
     @Test func transformDefaultImplementationOptsOut() async {
         // A provider without transform support (protocol default) is skipped.
         let rulesOnly = FakeProvider(id: "fake")   // FakeProvider has no transform override

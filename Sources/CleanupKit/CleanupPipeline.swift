@@ -58,7 +58,7 @@ extension CleanupPipeline: TextTransforming {
                     try await provider.transform(text, instruction: instruction)
                 }
                 let edited = out.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !edited.isEmpty { return edited }
+                if !edited.isEmpty, EditResponseGuard.isCompliant(edited) { return edited }
             } catch { continue }
         }
         return nil

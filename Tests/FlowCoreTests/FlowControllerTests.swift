@@ -51,6 +51,15 @@ final class MockInserter: TextInserting, @unchecked Sendable {
     }
 }
 
+actor MockLiveTyping: LiveTyping {
+    private(set) var beginCount = 0
+    private(set) var updates: [String] = []
+    private(set) var clearCount = 0
+    func begin() async { beginCount += 1 }
+    func update(_ text: String) async { updates.append(text) }
+    func clearTyped() async { clearCount += 1 }
+}
+
 // MARK: harness
 
 @MainActor
@@ -66,6 +75,7 @@ struct Harness {
 
     init(cleanup: any CleanupProcessing = EchoCleanup(),
          liveTranscriber: (any LiveTranscribing)? = nil,
+         liveTypist: (any LiveTyping)? = nil,
          transformer: (any TextTransforming)? = nil,
          selectionReader: (@Sendable () async -> String?)? = nil) {
         let dir = tempDirFC()
@@ -80,6 +90,7 @@ struct Harness {
             frontmostBundleID: { "com.apple.Notes" },
             now: { now },
             liveTranscriber: liveTranscriber,
+            liveTypist: liveTypist,
             transformer: transformer,
             selectionReader: selectionReader)
         self.nowRef = { now = $0 }
@@ -422,6 +433,86 @@ struct FlowControllerTests {
         try? await Task.sleep(for: .milliseconds(100))
     }
 
+    @Test func liveTypingStreamsUpdatesAndClearsAfterProcessing() async {
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { continuation in
+                    continuation.yield(LiveUpdate(finalizedText: "", volatileText: "hello"))
+                    continuation.yield(LiveUpdate(finalizedText: "hello world", volatileText: ""))
+                }
+            }
+            func endSession() async {}
+        }
+        let typist = MockLiveTyping()
+        let h = Harness(liveTranscriber: ScriptedLive(), liveTypist: typist)
+        var s = h.settings.settings
+        s.liveTypingEnabled = true
+        h.settings.update(s)
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        h.nowRef(100.5)
+        h.hotkeys.continuation.yield(.keyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .idle = h.controller.phase { break }
+        }
+        let beginCount = await typist.beginCount
+        let updates = await typist.updates
+        let clearCount = await typist.clearCount
+        #expect(beginCount == 1)
+        #expect(updates == ["hello", "hello world"])
+        #expect(clearCount == 1)
+    }
+
+    @Test func liveTypingEngagesEvenWithHUDPreviewOff() async {
+        // Regression guard: the top-level guard must be (wantsHUD || wantsLiveType),
+        // not livePreviewEnabled alone — otherwise live-typing silently never
+        // engages when the user has HUD preview off.
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { $0.yield(LiveUpdate(finalizedText: "", volatileText: "hi")) }
+            }
+            func endSession() async {}
+        }
+        let typist = MockLiveTyping()
+        let h = Harness(liveTranscriber: ScriptedLive(), liveTypist: typist)
+        var s = h.settings.settings
+        s.livePreviewEnabled = false
+        s.liveTypingEnabled = true
+        h.settings.update(s)
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(h.controller.liveTranscript == "")   // HUD stays off
+        let updates = await typist.updates
+        #expect(updates == ["hi"])                   // but live-typing still ran
+        h.hotkeys.continuation.yield(.escapePressed)
+        try? await Task.sleep(for: .milliseconds(100))
+    }
+
+    @Test func liveTypingDisabledBySettingNeverEngages() async {
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { $0.yield(LiveUpdate(finalizedText: "", volatileText: "hi")) }
+            }
+            func endSession() async {}
+        }
+        let typist = MockLiveTyping()
+        let h = Harness(liveTranscriber: ScriptedLive(), liveTypist: typist)
+        // liveTypingEnabled defaults to false.
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        let beginCount = await typist.beginCount
+        #expect(beginCount == 0)
+        h.hotkeys.continuation.yield(.escapePressed)
+        try? await Task.sleep(for: .milliseconds(100))
+    }
+
     @Test func toneResolvesPerFrontmostApp() async {
         // Harness frontmost app is com.apple.Notes; override its tone.
         final class CapturingCleanup: CleanupProcessing, @unchecked Sendable {
@@ -447,6 +538,31 @@ struct FlowControllerTests {
         h.settings.update(s2)
         await h.dictate(holdFor: 0.5)
         #expect(capturing.lastOptions?.tone == .formal)      // falls back to default
+    }
+
+    @Test func voiceCommandStripsDiscardedTextBeforeCleanup() async {
+        final class CapturingCleanup: CleanupProcessing, @unchecked Sendable {
+            private(set) var lastRaw: String?
+            func process(_ raw: String, options: CleanupOptions,
+                         replacements: [Replacement]) async -> CleanupResult {
+                lastRaw = raw
+                return CleanupResult(text: raw, providerID: "mock")
+            }
+        }
+        let capturing = CapturingCleanup()
+        let h = Harness(cleanup: capturing)
+        h.transcriber.result = .success(Transcript(text: "buy milk scratch that buy bread", languageHint: nil))
+        h.controller.start()
+        await h.dictate(holdFor: 0.5)
+        #expect(capturing.lastRaw == "buy bread")
+    }
+
+    @Test func voiceCommandConvertsNewParagraphAfterCleanup() async {
+        let h = Harness(cleanup: EchoCleanup())
+        h.transcriber.result = .success(Transcript(text: "first point new paragraph second point", languageHint: nil))
+        h.controller.start()
+        await h.dictate(holdFor: 0.5)
+        #expect(h.inserter.insertedTexts.last?.contains("\n\n") == true)
     }
 
     @Test func hotkeyUnavailabilityDisablesAndClears() async {

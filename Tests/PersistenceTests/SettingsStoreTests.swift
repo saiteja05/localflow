@@ -64,4 +64,10 @@ struct SettingsStoreTests {
         #expect(reloaded.defaultTone == .casual)
         #expect(reloaded.appTones["com.apple.mail"] == .formal)
     }
+    @Test func liveTypingDefaultsOff() {
+        #expect(SettingsStore(directory: tempDir()).settings.liveTypingEnabled == false)
+    }
+    @Test func voiceCommandsDefaultsOn() {
+        #expect(SettingsStore(directory: tempDir()).settings.voiceCommandsEnabled == true)
+    }
 }

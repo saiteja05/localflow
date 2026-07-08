@@ -54,6 +54,7 @@ final class AppState {
             cleanup: pipeline, inserter: TextInserter(),
             settings: settingsStore, dictionary: dictionaryStore, history: historyStore,
             liveTranscriber: SystemLiveTranscriber(locale: fallbackLocale),
+            liveTypist: LiveTypist(),
             transformer: pipeline,
             selectionReader: { await SelectionReader.currentSelection() })
     }

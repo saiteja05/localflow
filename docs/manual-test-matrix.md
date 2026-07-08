@@ -59,3 +59,38 @@ Run before every release. Mark ✅/❌ + notes. (Spec §7.)
 | Settings persist across relaunch | |
 | Launch at login works after reboot | |
 | Little Snitch/LuLu: zero network except model download | |
+
+## Live-typing (experimental, opt-in — Settings → General)
+| Case | Result | Notes |
+|---|---|---|
+| Enable, dictate into TextEdit → live text appears, then replaced by final cleaned text with no leftover characters | | |
+| Enable, dictate into Notion (web) | | |
+| Enable, dictate into Gmail compose (Safari) | | |
+| Enable, dictate into WhatsApp (Electron/web) | | |
+| Enable, disable "Live preview while dictating" (HUD off) → live-typing still engages | | regression check: `wantsHUD \|\| wantsLiveType` guard |
+| Enable, press Esc mid-dictation → partial live-typed draft fully backspaced out, nothing left behind | | |
+| Enable, Edit Mode (Right ⌥) → live-typing does NOT engage (scoped to normal dictation only) | | |
+| Disabled (default) → no synthetic keystrokes at all during dictation | | |
+
+## Voice commands (Settings → General, default on)
+| Case | Result | Notes |
+|---|---|---|
+| Say "...scratch that..." mid-dictation, Level Off → discarded text does not appear | | |
+| Say "...scratch that..." mid-dictation, Level Standard | | |
+| Say "...scratch that..." mid-dictation, Level Heavy | | |
+| Say "...new paragraph..." → literal blank line in inserted text, Level Standard | | |
+| Say "...new line..." → literal single line break, Level Standard | | |
+| Voice commands + live-typing both on → command phrase visibly typed live, then corrected/converted once final text lands | | expected, documented interaction |
+| Disable voice commands → "scratch that"/"new paragraph" dictated verbatim as text | | |
+
+## Dictation history window
+| Case | Result |
+|---|---|
+| Open via menu bar "Dictation History…" | |
+| Open via Settings → History → "Open Full History…" | |
+| Search box filters list by cleaned-text substring, case-insensitive | |
+| List updates live while a new dictation completes with the window open | |
+| Window resizes freely, reopens at a sane default size | |
+| App name resolves correctly for a currently running app | |
+| App name resolves correctly for an app that was quit after the dictation | |
+| Copy button copies the row's cleaned text to the clipboard | |

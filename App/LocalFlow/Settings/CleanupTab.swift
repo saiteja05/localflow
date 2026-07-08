@@ -68,7 +68,7 @@ struct CleanupTab: View {
 
             ForEach(appState.settingsStore.settings.appTones.keys.sorted(), id: \.self) { bundleID in
                 HStack {
-                    tonePicker(appDisplayName(bundleID), selection: Binding(
+                    tonePicker(AppDisplayName.resolve(bundleID), selection: Binding(
                         get: { appState.settingsStore.settings.appTones[bundleID] ?? .neutral },
                         set: { t in appState.editSettings { $0.appTones[bundleID] = t } }))
                     Button(role: .destructive) {
@@ -107,11 +107,6 @@ struct CleanupTab: View {
                 return (id, app.localizedName ?? id)
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    private func appDisplayName(_ bundleID: String) -> String {
-        NSWorkspace.shared.runningApplications
-            .first { $0.bundleIdentifier == bundleID }?.localizedName ?? bundleID
     }
 
     // MARK: Apple Intelligence

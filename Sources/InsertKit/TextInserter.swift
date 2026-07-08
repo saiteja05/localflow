@@ -20,7 +20,7 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
         case .pasteSwap:
             return await pasteSwap(text)
         case .typedUnicode:
-            await typeUnicode(text)
+            await KeystrokeSynthesis.typeUnicode(text)
             return .inserted(.typedUnicode)
         }
     }
@@ -68,21 +68,5 @@ public final class TextInserter: TextInserting, @unchecked Sendable {
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         return true
-    }
-
-    // MARK: Typed unicode — layout-independent, chunked, slow. Last resort.
-    private func typeUnicode(_ text: String) async {
-        guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-        for chunk in UnicodeChunker.chunks(of: text) {
-            let units = Array(chunk.utf16)
-            guard let down = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true),
-                  let up = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: false)
-            else { continue }
-            down.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
-            up.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units)
-            down.post(tap: .cghidEventTap)
-            up.post(tap: .cghidEventTap)
-            try? await Task.sleep(for: .milliseconds(8))   // pacing: fast posting drops chars
-        }
     }
 }

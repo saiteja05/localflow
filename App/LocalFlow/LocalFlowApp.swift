@@ -39,6 +39,7 @@ struct LocalFlowApp: App {
                 }
             }
             .disabled(appState.historyStore.entries.isEmpty)
+            HistoryMenuButton()
 
             Divider()
             SettingsLink { Text("Settings…") }.keyboardShortcut(",")
@@ -54,6 +55,11 @@ struct LocalFlowApp: App {
             OnboardingView(appState: appState)
         }
         .windowResizability(.contentSize)
+
+        Window("Dictation History", id: "history") {
+            HistoryWindowView(appState: appState)
+        }
+        .windowResizability(.automatic)
 
         Settings { SettingsView(appState: appState) }
     }
@@ -103,4 +109,9 @@ private struct MenuBarLabel: View {
         case .idle, .notice: return "waveform"
         }
     }
+}
+
+private struct HistoryMenuButton: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View { Button("Dictation History…") { openWindow(id: "history") } }
 }

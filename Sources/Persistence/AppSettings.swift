@@ -17,6 +17,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var defaultTone: Tone = .neutral            // LLM writing tone unless overridden
     public var appTones: [String: Tone] = [:]          // bundle ID -> tone override
     public var onboardingCompleted: Bool = false
+    public var liveTypingEnabled: Bool = false         // experimental: type live words into the focused app
+    public var voiceCommandsEnabled: Bool = true        // "scratch that", "new paragraph", etc.
 
     public init() {}
 
@@ -40,6 +42,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         defaultTone      = (try? c.decodeIfPresent(Tone.self, forKey: .defaultTone)).flatMap { $0 } ?? d.defaultTone
         appTones         = (try? c.decodeIfPresent([String: Tone].self, forKey: .appTones)).flatMap { $0 } ?? d.appTones
         onboardingCompleted = (try? c.decodeIfPresent(Bool.self, forKey: .onboardingCompleted)).flatMap { $0 } ?? d.onboardingCompleted
+        liveTypingEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .liveTypingEnabled)).flatMap { $0 } ?? d.liveTypingEnabled
+        voiceCommandsEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .voiceCommandsEnabled)).flatMap { $0 } ?? d.voiceCommandsEnabled
     }
 }
 

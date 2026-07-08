@@ -67,6 +67,14 @@ struct GeneralTab: View {
             Toggle("Live preview while dictating", isOn: Binding(
                 get: { appState.settingsStore.settings.livePreviewEnabled },
                 set: { on in appState.editSettings { $0.livePreviewEnabled = on } }))
+            Toggle("Type live into the focused app (experimental)", isOn: Binding(
+                get: { appState.settingsStore.settings.liveTypingEnabled },
+                set: { on in appState.editSettings { $0.liveTypingEnabled = on } }))
+            Text("Experimental: types words as you speak, then replaces them with the cleaned result. Uses synthetic keystrokes with no read-back — if the target app silently drops some keystrokes but still accepts the backspaces used to clear the draft, it can delete real text that was already in that field.")
+                .font(.caption).foregroundStyle(.secondary)
+            Toggle("Voice commands (\"scratch that\", \"new paragraph\")", isOn: Binding(
+                get: { appState.settingsStore.settings.voiceCommandsEnabled },
+                set: { on in appState.editSettings { $0.voiceCommandsEnabled = on } }))
             Toggle("Double-tap for hands-free mode", isOn: Binding(
                 get: { appState.settingsStore.settings.handsFreeEnabled },
                 set: { on in appState.editSettings { $0.handsFreeEnabled = on } }))

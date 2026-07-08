@@ -43,6 +43,7 @@ public final class FlowController {
     private let now: @Sendable () -> TimeInterval
     private let liveTranscriber: (any LiveTranscribing)?
     private var liveTask: Task<Void, Never>?
+    private let liveTypist: (any LiveTyping)?
     private let transformer: (any TextTransforming)?
     private let selectionReader: (@Sendable () async -> String?)?
     private var editSelection: String?
@@ -69,6 +70,7 @@ public final class FlowController {
                 now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSinceReferenceDate },
                 sessionCap: TimeInterval = 600,
                 liveTranscriber: (any LiveTranscribing)? = nil,
+                liveTypist: (any LiveTyping)? = nil,
                 transformer: (any TextTransforming)? = nil,
                 selectionReader: (@Sendable () async -> String?)? = nil) {
         self.hotkeys = hotkeys
@@ -83,6 +85,7 @@ public final class FlowController {
         self.now = now
         self.sessionCap = sessionCap
         self.liveTranscriber = liveTranscriber
+        self.liveTypist = liveTypist
         self.transformer = transformer
         self.selectionReader = selectionReader
         self.machine = GestureMachine(handsFreeEnabled: settings.settings.handsFreeEnabled)
@@ -198,21 +201,32 @@ public final class FlowController {
         }
     }
 
-    /// HUD-only preview: SpeechAnalyzer streams words while the user speaks;
-    /// the inserted text still comes from the batch pass. Never blocks capture.
+    /// HUD preview and/or live-typing: SpeechAnalyzer streams words while the
+    /// user speaks; the inserted text still comes from the batch pass. Never
+    /// blocks capture. `clearTyped()` runs at the tail of this same sequential
+    /// Task (not from `process()`/`.discardCapture`) so it always happens
+    /// strictly after the last `update()` — cancelling this Task does not
+    /// stop `liveTranscriber`'s producer, which only finishes once
+    /// `capture.stopCapture()`/`cancelCapture()` closes the chunk stream, so
+    /// clearing from outside this Task could race a still-draining stream.
     private func startLivePreview() {
-        guard settings.settings.livePreviewEnabled, let liveTranscriber else { return }
+        let wantsHUD = settings.settings.livePreviewEnabled
+        let wantsLiveType = settings.settings.liveTypingEnabled && liveTypist != nil && phase != .editing
+        guard wantsHUD || wantsLiveType, let liveTranscriber else { return }
         liveTask?.cancel()
-        liveTranscript = ""
+        if wantsHUD { liveTranscript = "" }
         let chunks = capture.makeLiveChunkStream()
         liveTask = Task { [weak self] in
             guard let self else { return }
             guard await liveTranscriber.isReady() else { return }
+            if wantsLiveType { await self.liveTypist?.begin() }
             let updates = await liveTranscriber.startSession(chunks: chunks)
             for await update in updates {
                 guard !Task.isCancelled else { break }
-                self.liveTranscript = update.displayText
+                if wantsHUD { self.liveTranscript = update.displayText }
+                if wantsLiveType { await self.liveTypist?.update(update.displayText) }
             }
+            if wantsLiveType { await self.liveTypist?.clearTyped() }
         }
     }
 
@@ -351,6 +365,9 @@ public final class FlowController {
         }
         let raw = transcript.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !raw.isEmpty else { return notice("Didn't catch that") }
+        let commandsOn = settings.settings.voiceCommandsEnabled
+        let commanded = commandsOn ? VoiceCommandProcessor.apply(raw) : raw
+        guard !commanded.isEmpty else { return notice("Didn't catch that") }
 
         setPhase(.cleaning)
         let tone = bundleID.flatMap { settings.settings.appTones[$0] }
@@ -358,20 +375,21 @@ public final class FlowController {
         let options = CleanupOptions(level: settings.settings.cleanupLevel,
                                      vocabulary: dictionary.vocabulary,
                                      tone: tone)
-        let result = await cleanup.process(raw, options: options,
+        let result = await cleanup.process(commanded, options: options,
                                            replacements: dictionary.replacements)
         // Filler-only dictation legitimately cleans to empty — never paste "".
         guard !result.text.isEmpty else { return notice("Didn't catch that") }
+        let finalText = commandsOn ? VoiceCommandProcessor.applyFormatting(result.text) : result.text
 
         setPhase(.inserting)
-        let outcome = await inserter.insert(result.text, bundleID: bundleID)
-        lastCleanedText = result.text
+        let outcome = await inserter.insert(finalText, bundleID: bundleID)
+        lastCleanedText = finalText
 
         history.isEnabled = settings.settings.historyEnabled
         if history.retentionLimit != settings.settings.historyRetention {
             history.retentionLimit = settings.settings.historyRetention
         }
-        history.add(HistoryEntry(timestamp: Date(), rawText: raw, cleanedText: result.text,
+        history.add(HistoryEntry(timestamp: Date(), rawText: raw, cleanedText: finalText,
                                  appBundleID: bundleID, providerID: result.providerID))
 
         switch outcome {

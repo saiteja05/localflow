@@ -3,6 +3,7 @@ import AppKit
 
 struct HistoryTab: View {
     @Bindable var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -20,23 +21,7 @@ struct HistoryTab: View {
                             appState.historyStore.retentionLimit = n
                         }), in: 10...1000, step: 10)
             Button("Clear History", role: .destructive) { appState.historyStore.clear() }
-
-            Section("Recent") {
-                ForEach(appState.historyStore.entries.suffix(20).reversed(), id: \.timestamp) { e in
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text(e.cleanedText).lineLimit(2)
-                            Text(e.timestamp, style: .relative).font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(e.cleanedText, forType: .string)
-                        } label: { Image(systemName: "doc.on.doc") }.buttonStyle(.borderless)
-                    }
-                }
-            }
+            Button("Open Full History…") { openWindow(id: "history") }
         }
         .formStyle(.grouped).padding()
     }
