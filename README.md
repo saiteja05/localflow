@@ -62,22 +62,54 @@ the emoji picker never fights the Fn hold.
 
 ## AI cleanup providers
 
-Cleanup runs as a fall-through chain — the first available provider wins, and
-insertion is **never** blocked by AI failure (worst case you get the instant
-rules-cleaned text):
+Cleanup runs as a fall-through chain (`CleanupPipeline`, providers tried in
+this fixed order): the first *available* provider wins, each request gets a
+4 s timeout (8 s for Edit Mode, since selections can be long), and insertion
+is **never** blocked by AI failure — worst case you get the instant
+rules-cleaned text. Every provider's response is also checked for stray
+conversational preamble ("Sure, here's...") or wrapping quotes before it's
+accepted; a response that fails the check is discarded and the pipeline
+falls through to the next provider, same as a hard error.
 
-1. **Apple Intelligence** (best: zero install, zero extra memory) — requires the
-   Apple Intelligence toggle in System Settings → Apple Intelligence & Siri.
-   After enabling, macOS downloads the on-device model; the Cleanup tab shows
-   the live state ("downloading — available soon" → "Available").
-2. **Ollama** (optional) — if [Ollama](https://ollama.com) is installed with
-   *any* chat-capable model, LocalFlow uses it automatically: when the
-   configured model isn't installed, it falls back to whatever is (embedding
-   models excluded) and says so in Settings → AI Cleanup. That tab can also
-   **start Ollama** for you and **download the recommended model**
-   (`qwen3:4b-instruct`, ~2.5 GB) in-app with a progress bar — no terminal needed.
-3. **Rules** (always on) — instant filler-stripping, stutter collapse,
-   capitalization. Also the offline/failure fallback and the "Light" level.
+1. **Apple Intelligence** (`AppleFMCleaner`, best: zero install, zero extra
+   memory) — uses Apple's on-device `LanguageModelSession`
+   (FoundationModels). Requires the Apple Intelligence toggle in
+   System Settings → Apple Intelligence & Siri. After enabling, macOS
+   downloads the on-device model itself; the Cleanup tab shows the live
+   state ("downloading — available soon" → "Available"). Nothing to
+   install, nothing LocalFlow manages.
+2. **Ollama** (`OllamaCleaner`, optional — **not auto-installed**) — talks to
+   a local Ollama server over HTTP at `127.0.0.1:11434` (never leaves the
+   machine). LocalFlow does not bundle, download, or silently install
+   Ollama itself; you install the Ollama app or CLI once, yourself, the
+   normal way. What LocalFlow *does* automate after that:
+   - **Detects** Ollama by checking for `/Applications/Ollama.app`,
+     `/usr/local/bin/ollama`, or `/opt/homebrew/bin/ollama`. If none of
+     those exist, Settings → AI Cleanup shows a **"Get Ollama…"** link to
+     [ollama.com/download](https://ollama.com/download) — that one step
+     (downloading and installing the app) is the only thing you do
+     manually, and only once.
+   - **Starts** it for you — once installed but not running, click
+     **"Start Ollama"** in Settings → AI Cleanup: LocalFlow launches
+     `Ollama.app` (or runs `ollama serve` directly if only the CLI is
+     present). No Terminal needed.
+   - **Picks a model** automatically — if *any* chat-capable model is
+     already installed (embedding-only models are excluded), LocalFlow uses
+     it with zero configuration, even if it's not the one LocalFlow
+     recommends, and says exactly which model it picked in Settings.
+   - **Downloads a model in-app** if none is installed — click
+     **"Download qwen3:4b-instruct"** (~2.5 GB) in Settings → AI Cleanup
+     and watch the progress bar; this streams Ollama's own `/api/pull`
+     endpoint, still no Terminal needed.
+   - Settings → AI Cleanup also lets you switch between any already-
+     installed model via a picker.
+
+   **Summary:** installing the Ollama application/CLI itself is a one-time
+   manual step (LocalFlow can't do this part for you); starting the server,
+   choosing a model, and downloading a model are all handled in-app.
+3. **Rules** (`RulesCleaner`, always on, no network) — instant filler-
+   stripping, stutter collapse, capitalization. Also the offline/failure
+   fallback and the "Light" level.
 
 Cleanup intensity (Settings → AI Cleanup): **Off** (raw transcript), **Light**
 (rules only), **Standard** (AI: fillers, punctuation, self-corrections),
