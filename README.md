@@ -27,8 +27,18 @@ your voice never leaves your Mac.
   per-app overrides in Settings → AI Cleanup
 - **Live preview**: your words stream into the HUD pill as you speak
   (display-only; the polished text lands on release)
+- **Live-typing** (experimental, opt-in): instead of only previewing, your
+  words are typed directly into the focused app as you speak via synthetic
+  keystrokes, then fully replaced by the AI-cleaned text on release — off by
+  default, see [Settings toggles](#settings-toggles) for the trade-off
+- **Voice commands** (on by default): say "scratch that" / "strike that" /
+  "undo that" / "delete that" mid-dictation to discard everything since the
+  last command; say "new paragraph" or "new line" for literal line breaks
 - **Edit mode**: select any text, hold **Right ⌥**, speak an instruction
   ("make this more concise") — the selection is replaced by the edited text
+- **Dictation history**: every cleaned dictation is saved locally and
+  searchable in a dedicated window (menu bar → "Dictation History…"), with
+  one-click copy per entry
 - **Always know the state**: the menu-bar item shows a live status line —
   "● Ready", "● Recording…", "● Processing…", or a warning naming exactly
   what's wrong and how to fix it
@@ -59,6 +69,38 @@ Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 Settings → General offers **Right ⌘** or a custom modifier+key combo instead of
 Fn. Tip: set System Settings → Keyboard → "Press 🌐 key" to **Do Nothing** so
 the emoji picker never fights the Fn hold.
+
+### Settings toggles
+
+Settings → General, all persisted across relaunch:
+
+| Toggle | Default | What it does |
+|---|---|---|
+| Live preview while dictating | On | Streams words into the HUD pill as you speak (display-only) |
+| Type live into the focused app *(experimental)* | **Off** | Types words into the focused app as you speak using synthetic keystrokes, then fully replaces them with the AI-cleaned text on release. No read-back of the target field: if an app silently drops some keystrokes but still accepts the backspaces used to clear the draft, it can delete real text that was already there. Scoped to normal dictation only — never engages during Edit Mode |
+| Voice commands ("scratch that", "new paragraph") | On | See [Voice commands](#voice-commands) below |
+| Double-tap for hands-free mode | On | Double-tap the hotkey to start hands-free; tap again to finish |
+| Launch at login | Off | Registers with `SMAppService` |
+
+### Voice commands
+
+Spoken alongside your dictation content, applied after the transcript is
+captured:
+
+- **Discard**: "scratch that", "strike that", "undo that", "delete that" —
+  drops everything since the last command (or the start of the dictation).
+  You can chain several in one utterance, e.g. "add eggs scratch that add
+  milk delete that add bread" → "add bread".
+- **Formatting**: "new paragraph" → a literal blank line, "new line" → a
+  literal single line break. These run *after* AI cleanup (cleanup collapses
+  whitespace, so a literal newline inserted earlier would just get flattened
+  back to a space).
+
+Both are literal phrase-matches with no semantic disambiguation, so genuinely
+dictating "please add a new paragraph to the essay" will trigger the
+formatting command — same accepted trade-off as "scratch that". Turn the
+toggle off if this becomes annoying, and vocabulary is still dictated
+verbatim.
 
 ## AI cleanup providers
 
@@ -143,7 +185,7 @@ Neutral adds no styling directive at all.
 ```sh
 brew install xcodegen
 git clone https://github.com/saiteja05/localflow.git && cd localflow
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 151 tests
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # 201 tests
 cd App && xcodegen && cd ..
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow -configuration Release build
