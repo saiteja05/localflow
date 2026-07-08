@@ -36,8 +36,9 @@ public struct CleanupPipeline: CleanupProcessing {
                     let out = try await withTimeout(timeout) {
                         try await provider.clean(ruled, options: options)
                     }
-                    let cleaned = out.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !cleaned.isEmpty { return finish(cleaned, provider.id) }
+                    let cleaned = ResponseGuard.stripWrappingQuotes(
+                        out.trimmingCharacters(in: .whitespacesAndNewlines))
+                    if !cleaned.isEmpty, ResponseGuard.isCompliant(cleaned) { return finish(cleaned, provider.id) }
                 } catch {
                     continue  // fall through to next provider (spec §5)
                 }
@@ -57,8 +58,9 @@ extension CleanupPipeline: TextTransforming {
                 let out = try await withTimeout(8) {
                     try await provider.transform(text, instruction: instruction)
                 }
-                let edited = out.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !edited.isEmpty, EditResponseGuard.isCompliant(edited) { return edited }
+                let edited = ResponseGuard.stripWrappingQuotes(
+                    out.trimmingCharacters(in: .whitespacesAndNewlines))
+                if !edited.isEmpty, ResponseGuard.isCompliant(edited) { return edited }
             } catch { continue }
         }
         return nil

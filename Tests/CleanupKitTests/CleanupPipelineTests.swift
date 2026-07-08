@@ -147,6 +147,50 @@ struct CleanupPipelineTests {
         #expect(await p.transform("text", instruction: "do it") == nil)
     }
 
+    @Test func processRejectsPreambleViolatingCleanupAndFallsThrough() async {
+        let hallucinating = FakeProvider(id: "apple-fm")
+        hallucinating.result = .success("Sure, here is the cleaned text: something unrelated")
+        let working = FakeProvider(id: "ollama")
+        working.result = .success("Ollama cleaned local flow.")
+        let p = CleanupPipeline(providers: [hallucinating, working])
+        let r = await p.process("raw", options: options(.standard), replacements: replacements)
+        #expect(r.text == "Ollama cleaned LocalFlow.")
+        #expect(r.providerID == "ollama")
+    }
+
+    @Test func processFallsBackToRulesWhenOnlyProviderViolatesPreamble() async {
+        let hallucinating = FakeProvider(id: "apple-fm")
+        hallucinating.result = .success("Sure, here is the cleaned text: something unrelated")
+        let p = CleanupPipeline(providers: [hallucinating])
+        let r = await p.process("um hello there", options: options(.standard), replacements: [])
+        #expect(r.text == "Hello there")
+        #expect(r.providerID == "rules")
+    }
+
+    @Test func processStripsWrappingQuotesFromProviderOutput() async {
+        let quoted = FakeProvider(id: "apple-fm")
+        quoted.result = .success("\"Hello there, team.\"")
+        let p = CleanupPipeline(providers: [quoted])
+        let r = await p.process("raw", options: options(.standard), replacements: [])
+        #expect(r.text == "Hello there, team.")
+        #expect(r.providerID == "apple-fm")
+    }
+
+    @Test func transformStripsWrappingQuotesFromProviderOutput() async {
+        final class EditProvider: CleanupProvider, @unchecked Sendable {
+            let id: String
+            var result: Result<String, CleanupError>
+            init(id: String, result: Result<String, CleanupError>) { self.id = id; self.result = result }
+            func isAvailable() async -> Bool { true }
+            func clean(_ text: String, options: CleanupOptions) async throws -> String { text }
+            func transform(_ text: String, instruction: String) async throws -> String { try result.get() }
+        }
+        let quoted = EditProvider(id: "apple-fm", result: .success("'Hi team, edited!'"))
+        let p = CleanupPipeline(providers: [quoted])
+        let edited = await p.transform("text", instruction: "do it")
+        #expect(edited == "Hi team, edited!")
+    }
+
     @Test func fillerOnlyInputLegitimatelyCleansToEmpty() async {
         // Not a contract violation: rules removing everything IS the feature.
         // FlowController maps empty cleaned text to "Didn't catch that" (Task 17).
