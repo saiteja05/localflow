@@ -133,6 +133,10 @@ h1, h2, h3, .nav-brand, .stat-num, .hero-facts strong {
 .cta-arrow { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; background: #fff; color: var(--blue); border-radius: 50%; }
 .cta-ghost { font-size: 15px; font-weight: 600; color: var(--ink-70); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--glass); transition: color 0.2s, background 0.2s; }
 .cta-ghost:hover { color: var(--ink); background: var(--glass-strong); }
+.hero-star { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-70); padding: 8px 4px; transition: color 0.2s; }
+.hero-star:hover { color: var(--ink); }
+.hero-star:hover .hero-star-ic { transform: scale(1.15) rotate(-8deg); }
+.hero-star-ic { color: #f5a623; font-size: 16px; line-height: 1; transition: transform 0.2s var(--ease); }
 
 .hero-facts { list-style: none; display: flex; gap: 34px; margin-top: 40px; flex-wrap: wrap; }
 .hero-facts li { font-size: 14px; color: var(--ink-55); }
