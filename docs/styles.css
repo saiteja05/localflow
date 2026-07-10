@@ -229,6 +229,14 @@ section { max-width: var(--maxw); margin: 0 auto; padding: clamp(64px, 10vw, 130
 .req-card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-40); margin-bottom: 16px; font-weight: 700; }
 .req-card dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 0; border-top: 1px solid var(--stroke); }
 .req-card dl > div:first-child { border-top: none; }
+/* star cta */
+.starcta { padding-top: 0; }
+.star-card { max-width: 720px; margin: 0 auto; padding: clamp(36px, 5vw, 56px); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.star-ic { font-size: 34px; line-height: 1; color: #f5a623; filter: drop-shadow(0 4px 12px rgba(245,166,35,0.35)); }
+.star-card h2 { font-family: 'Fustat', 'Inter', sans-serif; font-size: clamp(24px, 3.2vw, 38px); font-weight: 800; letter-spacing: -0.03em; }
+.star-card p { color: var(--ink-70); font-size: clamp(14px, 1.5vw, 17px); max-width: 460px; }
+.star-card .cta-primary { margin-top: 10px; }
+
 .req-card dt { color: var(--ink-40); font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
 .req-card dd { color: var(--ink); font-size: 14.5px; text-align: right; }
 
