@@ -133,8 +133,8 @@ h1, h2, h3, .nav-brand, .stat-num, .hero-facts strong {
 .cta-arrow { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; background: #fff; color: var(--blue); border-radius: 50%; }
 .cta-ghost { font-size: 15px; font-weight: 600; color: var(--ink-70); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--glass); transition: color 0.2s, background 0.2s; }
 .cta-ghost:hover { color: var(--ink); background: var(--glass-strong); }
-.hero-star { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-70); padding: 8px 4px; transition: color 0.2s; }
-.hero-star:hover { color: var(--ink); }
+.hero-star { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #a8710b; padding: 13px 18px; border-radius: 14px; border: 1px solid rgba(245,166,35,0.4); background: rgba(245,166,35,0.1); transition: background 0.2s, transform 0.2s var(--ease), box-shadow 0.2s; }
+.hero-star:hover { background: rgba(245,166,35,0.18); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(245,166,35,0.22); }
 .hero-star:hover .hero-star-ic { transform: scale(1.15) rotate(-8deg); }
 .hero-star-ic { color: #f5a623; font-size: 16px; line-height: 1; transition: transform 0.2s var(--ease); }
 
