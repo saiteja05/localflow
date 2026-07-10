@@ -2,6 +2,8 @@ name: release
 on:
   push:
     tags: ["v*"]
+permissions:
+  contents: write
 jobs:
   build-release:
     runs-on: macos-26
