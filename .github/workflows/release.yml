@@ -28,6 +28,16 @@ jobs:
         with:
           files: LocalFlow.dmg
           body: |
-            Unsigned build, after opening the DMG and dragging LocalFlow to Applications, run once:
-            `xattr -dr com.apple.quarantine /Applications/LocalFlow.app` or right-click → Open.
-            (Developer ID signing + notarization planned.)
+            ## Install
+            1. Download `LocalFlow.dmg` below, open it, and drag LocalFlow onto the Applications shortcut in the window that appears.
+            2. This is an unsigned build for now. On first launch, macOS will block it: run `xattr -dr com.apple.quarantine /Applications/LocalFlow.app` once, or right-click the app and choose Open.
+            3. Launch LocalFlow and grant Microphone and Accessibility when onboarding asks. Accessibility is what lets LocalFlow see the dictation hotkey and type into other apps.
+            4. The speech model (~600 MB) downloads once in the background; dictation works immediately via Apple's built-in model while it does.
+
+            ## Upgrading from an earlier build
+            If LocalFlow was already installed and Accessibility was already granted, updating to this build can leave the menu bar showing "Hotkey inactive" even though the Accessibility toggle looks on. This is a known side effect of ad-hoc code signing (each build has a different code identity, so macOS can hold a stale grant tied to the old binary). Fix: open Privacy & Security -> Accessibility, remove LocalFlow with the minus button, then relaunch and re-grant. Developer ID signing and notarization are planned, which will remove this step entirely for future releases.
+
+            ## Known limitations
+            - Unsigned build: see the notes above on first launch and on upgrades.
+            - "Type live into the focused app" (Settings -> General) is experimental and does not yet reliably type into the target app; leave it off unless you are testing it.
+            - Full troubleshooting and the complete feature list: see the README at https://github.com/saiteja05/localflow#readme
