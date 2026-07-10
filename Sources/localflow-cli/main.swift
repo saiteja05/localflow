@@ -93,6 +93,16 @@ case "insert":
     let outcome = await TextInserter().insert(args[1], bundleID: FrontmostApp.bundleID())
     print("outcome: \(outcome)")
 
+case "typeunicode":
+    guard args.count >= 2 else { print("usage: localflow-cli typeunicode <text>"); exit(1) }
+    print("focus a text field — typing in 3s…")
+    try await Task.sleep(for: .seconds(3))
+    await KeystrokeSynthesis.typeUnicode(args[1])
+    print("typed. backspacing in 2s…")
+    try await Task.sleep(for: .seconds(2))
+    await KeystrokeSynthesis.backspace(count: args[1].count)
+    print("done")
+
 default:
-    print("commands: transcribe | record | hotkey | insert")
+    print("commands: transcribe | record | hotkey | insert | typeunicode")
 }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalFlow — Your voice, amplified.</title>
+  <meta name="description" content="A new way to think and create on your Mac. Speak naturally and get polished text wherever your cursor is — fast, free, open-source, and 100% on-device." />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="LocalFlow — Your voice, amplified." />
+  <meta property="og:description" content="A new way to think and create on your Mac. Free, open-source, 100% on-device voice dictation." />
+  <meta property="og:url" content="https://localflow.ninja" />
+  <meta property="og:image" content="https://localflow.ninja/assets/localflow-og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="LocalFlow — Your voice, amplified." />
+  <meta name="twitter:description" content="A new way to think and create on your Mac. Free, open-source, 100% on-device voice dictation." />
+  <meta name="twitter:image" content="https://localflow.ninja/assets/localflow-og.png" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=3" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=3" />
+  <link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48.png?v=3" />
+  <link rel="icon" type="image/png" href="assets/favicon.png?v=3" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=3" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fustat:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- layered background glow -->
+  <div class="bg-glow" aria-hidden="true">
+    <span class="glow glow-a"></span>
+    <span class="glow glow-b"></span>
+  </div>
+
+  <!-- ===================== GLASS NAVBAR ===================== -->
+  <nav class="glass-nav" aria-label="Primary">
+    <a class="nav-brand" href="#top" aria-label="LocalFlow home">
+      <img class="brand-icon" src="assets/localflow-mark.png" alt="" width="30" height="30" />
+      LocalFlow
+    </a>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#install">Install</a>
+    </div>
+    <a class="nav-signup" href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">
+      Download
+      <span class="signup-arrow" aria-hidden="true">
+        <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3 8h9M8 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </a>
+  </nav>
+
+  <!-- ===================== HERO ===================== -->
+  <header class="hero" id="top">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="badge">
+          <span class="badge-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 24" width="18" height="11"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="4" y1="9" x2="4" y2="15"/><line x1="14" y1="4" x2="14" y2="20"/><line x1="24" y1="7" x2="24" y2="17"/><line x1="36" y1="10" x2="36" y2="14"/></g></svg>
+          </span>
+          Free &amp; open-source · runs 100% on your Mac
+        </div>
+
+        <h1 class="hero-title">Your voice,<br />amplified.</h1>
+        <p class="hero-sub">A new way to think and create on your Mac.</p>
+
+        <div class="hero-actions">
+          <a class="cta-primary" href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">
+            Get it for macOS
+            <span class="cta-arrow" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="14" height="14"><path d="M3 8h9M8 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </a>
+          <a class="cta-ghost" href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">View source</a>
+        </div>
+
+        <ul class="hero-facts">
+          <li><strong>~1s</strong> thought to text</li>
+          <li><strong>25</strong> languages, on-device</li>
+          <li><strong>$0</strong> forever</li>
+        </ul>
+      </div>
+
+      <div class="hero-orb" aria-hidden="true">
+        <div class="orb-fallback"></div>
+        <video class="orb-video" autoplay loop muted playsinline poster="">
+          <source src="https://future.co/images/homepage/glassy-orb/orb-purple.webm" type="video/webm" />
+        </video>
+      </div>
+    </div>
+
+    <!-- powered-by row -->
+    <div class="poweredby">
+      <span class="poweredby-label">Powered by</span>
+      <div class="poweredby-logos">
+        <span>FluidAudio</span>
+        <span>NVIDIA Parakeet</span>
+        <span>Apple Neural Engine</span>
+        <span>Core ML</span>
+        <span>Ollama</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== BEFORE / AFTER ===================== -->
+    <section class="demo" id="demo">
+      <div class="section-head">
+        <span class="kicker">One thought at a time</span>
+        <h2>You ramble. It writes.</h2>
+        <p class="lede">Talk the way you actually think — half-formed, self-correcting, full of <em>ums</em>. LocalFlow hands back the sentence you meant.</p>
+      </div>
+      <div class="demo-stage">
+        <div class="glass-card demo-before">
+          <div class="demo-label"><span class="mic-dot" aria-hidden="true"></span> You said</div>
+          <p class="demo-text" id="demo-before-text"></p>
+        </div>
+        <div class="demo-arrow" aria-hidden="true">
+          <svg viewBox="0 0 48 24" width="46" height="24"><path d="M2 12 H42 M34 5 L44 12 L34 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="glass-card demo-after">
+          <div class="demo-label"><span class="check-dot" aria-hidden="true"></span> LocalFlow typed</div>
+          <p class="demo-text demo-clean" id="demo-after-text"></p>
+        </div>
+      </div>
+      <p class="demo-caption">Fillers gone · self-corrections applied · punctuation, capitalization &amp; tone handled.</p>
+    </section>
+
+    <!-- ===================== HOW ===================== -->
+    <section class="how" id="how">
+      <div class="section-head">
+        <span class="kicker">The loop</span>
+        <h2>Hold. Speak. Release.</h2>
+        <p class="lede">No window to open. No button to find. It lives in your menu bar and works in every app you already use.</p>
+      </div>
+      <ol class="steps">
+        <li class="glass-card step reveal"><span class="step-num">01</span><h3>Hold a key</h3><p>Press and hold <kbd>Fn</kbd> — or your own shortcut. A quiet pill appears and never steals focus.</p></li>
+        <li class="glass-card step reveal"><span class="step-num">02</span><h3>Speak your mind</h3><p>Talk naturally, at the speed of thought. Your words stream in live as you go.</p></li>
+        <li class="glass-card step reveal"><span class="step-num">03</span><h3>Release</h3><p>Let go. In about a second, clean, finished text lands right where your cursor was.</p></li>
+      </ol>
+    </section>
+
+    <!-- ===================== FEATURES ===================== -->
+    <section class="features" id="features">
+      <div class="section-head">
+        <span class="kicker">Built to keep up with you</span>
+        <h2>Everything, without leaving your keyboard.</h2>
+      </div>
+      <div class="feature-grid">
+        <article class="glass-card feature reveal"><div class="feature-ic">✦</div><h3>Writing, not transcription</h3><p>Fillers removed, false starts dropped, punctuation sorted — so it reads like you wrote it.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">↺</div><h3>Self-corrections</h3><p>Say "no wait, I meant…" and it keeps only what you meant. It follows your train of thought.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">⌘</div><h3>Works in every app</h3><p>Mail, Slack, Notes, VS Code, browser, terminal. Anywhere there's a cursor, there's LocalFlow.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">✎</div><h3>Edit by voice</h3><p>Select text, hold a key, and say "make this more concise." The selection is rewritten in place.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">◐</div><h3>Per-app tone</h3><p>Casual in Slack, formal in Mail. Set a default voice and override it wherever it matters.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">✚</div><h3>Your own dictionary</h3><p>Teach it your names and jargon. "eng standup" becomes "Engineering Standup," every time.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">⚡</div><h3>Hands-free mode</h3><p>Double-tap to start, tap to finish — for the long thoughts you don't want to hold a key through.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">◍</div><h3>25 languages</h3><p>On-device speech models with automatic language detection. Switch whenever you like.</p></article>
+        <article class="glass-card feature reveal"><div class="feature-ic">◷</div><h3>Searchable history</h3><p>Every dictation saved locally and searchable, with one-click copy. Or turn it off entirely.</p></article>
+      </div>
+    </section>
+
+    <!-- ===================== PRIVACY ===================== -->
+    <section class="privacy" id="privacy">
+      <div class="glass-card privacy-inner">
+        <div class="privacy-copy">
+          <span class="kicker">Private by construction</span>
+          <h2>Your voice never leaves your Mac.</h2>
+          <p class="lede">Audio is captured, transcribed, and cleaned entirely on your device, then discarded from memory. No account. No telemetry. No cloud.</p>
+          <p class="privacy-proof">The only network connection LocalFlow ever makes is a one-time model download. <strong>Watch it with Little Snitch — after that, silence.</strong></p>
+          <ul class="privacy-list">
+            <li>On-device speech-to-text on the Neural Engine</li>
+            <li>On-device AI cleanup (Apple Intelligence or local Ollama)</li>
+            <li>History stored only on your Mac — or not at all</li>
+            <li>Two permissions, ever: Microphone &amp; Accessibility</li>
+          </ul>
+        </div>
+        <div class="privacy-viz" aria-hidden="true">
+          <img class="privacy-logo" src="assets/localflow-icon.png" alt="LocalFlow" width="180" height="180" />
+          <p class="orb-caption">Everything stays here.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== INSTALL ===================== -->
+    <section class="install" id="install">
+      <div class="section-head">
+        <span class="kicker">Get started</span>
+        <h2>Up and running in three minutes.</h2>
+      </div>
+      <div class="install-grid">
+        <div class="install-steps">
+          <ol>
+            <li><span>Download</span> <code>LocalFlow.zip</code> from Releases, unzip, and drag it into Applications.</li>
+            <li><span>First launch:</span> right-click → Open (it's an unsigned build for now).</li>
+            <li><span>Grant</span> Microphone &amp; Accessibility when onboarding asks — the only two permissions.</li>
+            <li><span>Dictate immediately</span> while the speech model downloads once in the background.</li>
+          </ol>
+          <div class="install-cta">
+            <a class="cta-primary" href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">Get it for macOS
+              <span class="cta-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M3 8h9M8 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            </a>
+            <a class="cta-ghost" href="https://github.com/saiteja05/localflow#build-from-source" target="_blank" rel="noopener">Build from source</a>
+          </div>
+        </div>
+        <aside class="glass-card req-card">
+          <h3>Requirements</h3>
+          <dl>
+            <div><dt>Chip</dt><dd>Apple Silicon (M-series)</dd></div>
+            <div><dt>macOS</dt><dd>26 (Tahoe) or later</dd></div>
+            <div><dt>Permissions</dt><dd>Microphone &amp; Accessibility</dd></div>
+            <div><dt>License</dt><dd>MIT — free forever</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="footer">
+    <div class="footer-top">
+      <a class="nav-brand" href="#top" aria-label="LocalFlow home">
+        <img class="brand-icon" src="assets/localflow-mark.png" alt="" width="28" height="28" />
+        LocalFlow
+      </a>
+      <p class="footer-tag">Your voice, amplified.</p>
+      <nav class="footer-links" aria-label="Footer">
+        <a href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="#privacy">Privacy</a>
+        <a href="https://github.com/saiteja05/localflow/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>Built on FluidAudio, NVIDIA Parakeet, and Apple's on-device frameworks.</p>
+      <p>© <span id="year"></span> LocalFlow · MIT Licensed · Made for macOS</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

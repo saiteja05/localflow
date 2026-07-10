@@ -48,7 +48,7 @@ your voice never leaves your Mac.
 
 Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 
-1. Download `LocalFlow.zip` from [Releases](https://github.com/saiteja05/localflow/releases), unzip, drag to Applications.
+1. Download `LocalFlow.dmg` from [Releases](https://github.com/saiteja05/localflow/releases), open it, and drag the LocalFlow icon onto the Applications shortcut shown in the Finder window that opens.
 2. Unsigned build for now: `xattr -dr com.apple.quarantine /Applications/LocalFlow.app`
    (or right-click → Open).
 3. Launch. Grant **Microphone** and **Accessibility** when the onboarding asks
@@ -213,9 +213,10 @@ History is optional (Settings → History) and stored only in
 
 ## Known issues
 
-See [docs/known-issues.md](docs/known-issues.md) for tracked follow-ups and
+See [docs/known-issues.md](docs/known-issues.md) for tracked follow-ups,
 [docs/manual-test-matrix.md](docs/manual-test-matrix.md) for the release
-verification checklist.
+verification checklist, and [docs/pending-features.md](docs/pending-features.md)
+for the roadmap of unverified and not-yet-started work.
 
 ## Acknowledgements
 

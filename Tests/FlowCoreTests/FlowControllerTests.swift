@@ -60,6 +60,35 @@ actor MockLiveTyping: LiveTyping {
     func clearTyped() async { clearCount += 1 }
 }
 
+actor CallOrderLog {
+    private(set) var events: [String] = []
+    func record(_ event: String) { events.append(event) }
+}
+
+/// `LiveTyping` mock whose `clearTyped()` is artificially slow, to prove that
+/// `process()` waits for it to finish before the final insert runs.
+final class SlowClearMockLiveTyping: LiveTyping, @unchecked Sendable {
+    let log: CallOrderLog
+    init(log: CallOrderLog) { self.log = log }
+    func begin() async {}
+    func update(_ text: String) async {}
+    func clearTyped() async {
+        try? await Task.sleep(for: .milliseconds(80))
+        await log.record("clearTyped")
+    }
+}
+
+/// `TextInserting` mock that records when `insert` runs, to compare against
+/// `clearTyped()`'s completion order.
+final class OrderRecordingInserter: TextInserting, @unchecked Sendable {
+    let log: CallOrderLog
+    init(log: CallOrderLog) { self.log = log }
+    func insert(_ text: String, bundleID: String?) async -> InsertionOutcome {
+        await log.record("insert")
+        return .inserted(.pasteSwap)
+    }
+}
+
 // MARK: harness
 
 @MainActor
@@ -77,7 +106,8 @@ struct Harness {
          liveTranscriber: (any LiveTranscribing)? = nil,
          liveTypist: (any LiveTyping)? = nil,
          transformer: (any TextTransforming)? = nil,
-         selectionReader: (@Sendable () async -> String?)? = nil) {
+         selectionReader: (@Sendable () async -> String?)? = nil,
+         inserter: (any TextInserting)? = nil) {
         let dir = tempDirFC()
         history = HistoryStore(directory: dir)
         let settings = SettingsStore(directory: dir)
@@ -85,7 +115,7 @@ struct Harness {
         nonisolated(unsafe) var now: TimeInterval = 100
         controller = FlowController(
             hotkeys: hotkeys, capture: capture, transcriber: transcriber,
-            cleanup: cleanup, inserter: inserter,
+            cleanup: cleanup, inserter: inserter ?? self.inserter,
             settings: settings, dictionary: DictionaryStore(directory: dir), history: history,
             frontmostBundleID: { "com.apple.Notes" },
             now: { now },
@@ -464,6 +494,35 @@ struct FlowControllerTests {
         #expect(beginCount == 1)
         #expect(updates == ["hello", "hello world"])
         #expect(clearCount == 1)
+    }
+
+    @Test func liveTypingClearTypedCompletesBeforeFinalInsert() async {
+        final class ScriptedLive: LiveTranscribing, @unchecked Sendable {
+            func isReady() async -> Bool { true }
+            func startSession(chunks: AsyncStream<[Float]>) async -> AsyncStream<LiveUpdate> {
+                AsyncStream { continuation in
+                    continuation.yield(LiveUpdate(finalizedText: "hello", volatileText: ""))
+                }
+            }
+            func endSession() async {}
+        }
+        let log = CallOrderLog()
+        let typist = SlowClearMockLiveTyping(log: log)
+        let orderInserter = OrderRecordingInserter(log: log)
+        let h = Harness(liveTranscriber: ScriptedLive(), liveTypist: typist, inserter: orderInserter)
+        var s = h.settings.settings
+        s.liveTypingEnabled = true
+        h.settings.update(s)
+        h.controller.start()
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(150))
+        h.nowRef(100.5)
+        h.hotkeys.continuation.yield(.keyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .idle = h.controller.phase { break }
+        }
+        #expect(await log.events == ["clearTyped", "insert"])
     }
 
     @Test func liveTypingEngagesEvenWithHUDPreviewOff() async {

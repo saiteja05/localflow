@@ -9,8 +9,8 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install XcodeGen and create-dmg
+        run: brew install xcodegen create-dmg
       - name: Tests
         run: swift test
       - name: Build app
@@ -19,15 +19,13 @@ jobs:
           xcodebuild -project App/LocalFlow.xcodeproj -scheme LocalFlow \
             -configuration Release -derivedDataPath build \
             CODE_SIGN_IDENTITY="-" build
-      - name: Zip
-        run: |
-          ditto -c -k --keepParent \
-            build/Build/Products/Release/LocalFlow.app LocalFlow.zip
+      - name: Build DMG
+        run: scripts/build-dmg.sh build/Build/Products/Release/LocalFlow.app .
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: LocalFlow.zip
+          files: LocalFlow.dmg
           body: |
-            Unsigned build — after unzipping, run once with:
-            `xattr -dr com.apple.quarantine LocalFlow.app` or right-click → Open.
+            Unsigned build, after opening the DMG and dragging LocalFlow to Applications, run once:
+            `xattr -dr com.apple.quarantine /Applications/LocalFlow.app` or right-click → Open.
             (Developer ID signing + notarization planned.)

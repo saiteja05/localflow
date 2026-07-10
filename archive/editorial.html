@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalFlow — Your voice, amplified.</title>
+  <meta name="description" content="A new way to think and create on your Mac. Speak naturally and get polished text wherever your cursor is — fast, free, open-source, and 100% on-device." />
+  <meta name="theme-color" content="#fcfcfc" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=3" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="editorial.css" />
+</head>
+<body>
+  <!-- ===================== SECTION 1: HERO ===================== -->
+  <section class="hero" id="top">
+    <canvas class="hero-bg" id="bgwave" aria-hidden="true"></canvas>
+
+    <header class="masthead">
+      <h1 class="wordmark" aria-label="LocalFlow" data-word="localflow"></h1>
+
+      <div class="subnav">
+        <div class="subnav-col brandwords">
+          <span>Local</span><span>Voice</span><span>macOS</span>
+        </div>
+        <span class="arrow" aria-hidden="true">→</span>
+        <p class="subnav-desc">
+          Speak naturally and get polished text wherever your cursor is —
+          fast, free, and entirely on your Mac.
+        </p>
+        <span class="arrow" aria-hidden="true">→</span>
+        <nav class="subnav-links" aria-label="Primary">
+          <a href="#explore">Features</a>
+          <a href="#collection">How it works</a>
+          <a href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">Privacy</a>
+          <a href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">Install</a>
+          <a href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span>
+        </button>
+      </div>
+
+      <div class="mobile-menu" id="mobileMenu" hidden>
+        <a href="#explore">Features</a>
+        <a href="#collection">How it works</a>
+        <a href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">Install</a>
+        <a href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </header>
+
+    <div class="hero-body">
+      <div class="hero-left">
+        <div class="indicator"><span>01</span><i></i></div>
+        <h2 class="hero-headline">YOUR VOICE<br />AMPLIFIED</h2>
+        <p class="hero-desc">Hold a key, speak your mind, and let go — polished text appears in about a second.</p>
+        <a class="cta" href="https://github.com/saiteja05/localflow/releases" target="_blank" rel="noopener">
+          <span class="cta-slide" aria-hidden="true"></span>
+          <span class="cta-ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="cta-text">Download</span>
+        </a>
+      </div>
+
+      <div class="hero-right">
+        <div class="specimen">
+          <h3>Parakeet TDT&nbsp;v3</h3>
+          <p>On-device speech model<br />Neural Engine · 25 languages</p>
+        </div>
+        <div class="stats">
+          <div><span class="stat-k">Latency</span><span class="stat-v">~1 s</span></div>
+          <div><span class="stat-k">To cloud</span><span class="stat-v">0 bytes</span></div>
+        </div>
+        <a class="viewdetails" href="https://github.com/saiteja05/localflow" target="_blank" rel="noopener">
+          <span class="vd-circle" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </span>
+          View source
+        </a>
+      </div>
+    </div>
+
+    <div class="scroll-cue">
+      <span class="cue-circle" aria-hidden="true"><i></i><i></i></span>
+      Scroll to explore
+    </div>
+  </section>
+
+  <!-- ===================== SECTION 2: EXPLORE ===================== -->
+  <section class="explore" id="explore">
+    <p class="seclabel"><span>02</span> Why LocalFlow</p>
+    <h2 class="explore-heading reveal">Talk instead of type — anywhere on your Mac, with text that reads like you wrote&nbsp;it.</h2>
+    <div class="pills">
+      <button class="pill">◍ On-device</button>
+      <button class="pill">✦ Free &amp; open-source</button>
+      <button class="pill">◐ 25 languages</button>
+      <button class="pill">↺ AI cleanup</button>
+      <button class="pill">⌘ Works everywhere</button>
+    </div>
+    <div class="explore-foot">
+      <span>WE DON'T JUST TRANSCRIBE.</span>
+      <span>LOCALFLOW © 2026</span>
+    </div>
+  </section>
+
+  <!-- ===================== SECTION 3: COLLECTION (DARK) ===================== -->
+  <section class="collection" id="collection">
+    <div class="coll-head">
+      <h2>Everything happens on your Mac
+        <span class="coll-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        and nowhere else.</h2>
+      <div class="coll-side">
+        <p class="coll-tag">WE DON'T SEND YOUR VOICE ANYWHERE<br />IT NEVER LEAVES THE DEVICE</p>
+        <div class="coll-pills">
+          <span>Private</span><span>Instant</span><span>Yours</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-left">
+        <div class="panel-stars">✳ ✳ ✳</div>
+        <div class="panel-visual">
+          <img src="assets/localflow-icon.png" alt="LocalFlow" width="220" height="220" />
+        </div>
+        <div class="panel-counter"><span id="chapCounter">01</span> <i>/</i> 05</div>
+      </div>
+
+      <div class="panel-right">
+        <div class="panel-bar">
+          <span>Hold. Speak. Release.</span>
+          <span id="chapLabel">Chapter 01</span>
+        </div>
+        <ul class="chapters" id="chapters">
+          <li class="chap active" data-i="0"><span>Hold &amp; speak</span><i class="chap-arrow" aria-hidden="true">↗</i></li>
+          <li class="chap" data-i="1"><span>Captured live, no clipped words</span><i class="chap-arrow" aria-hidden="true">↗</i></li>
+          <li class="chap" data-i="2"><span>Transcribed on the Neural Engine</span><i class="chap-arrow" aria-hidden="true">↗</i></li>
+          <li class="chap" data-i="3"><span>Cleaned up by on-device AI</span><i class="chap-arrow" aria-hidden="true">↗</i></li>
+          <li class="chap" data-i="4"><span>Inserted wherever your cursor is</span><i class="chap-arrow" aria-hidden="true">↗</i></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="coll-foot">100% ON-DEVICE · MIT LICENSED · MADE FOR MACOS</div>
+  </section>
+
+  <script src="editorial.js"></script>
+</body>
+</html>

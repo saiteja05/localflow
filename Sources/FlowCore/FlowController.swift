@@ -43,6 +43,7 @@ public final class FlowController {
     private let now: @Sendable () -> TimeInterval
     private let liveTranscriber: (any LiveTranscribing)?
     private var liveTask: Task<Void, Never>?
+    private var liveTypingActiveForSession = false
     private let liveTypist: (any LiveTyping)?
     private let transformer: (any TextTransforming)?
     private let selectionReader: (@Sendable () async -> String?)?
@@ -212,6 +213,8 @@ public final class FlowController {
     private func startLivePreview() {
         let wantsHUD = settings.settings.livePreviewEnabled
         let wantsLiveType = settings.settings.liveTypingEnabled && liveTypist != nil && phase != .editing
+        liveTypeDebugLog("startLivePreview: wantsHUD=\(wantsHUD) wantsLiveType=\(wantsLiveType) livePreviewEnabled=\(settings.settings.livePreviewEnabled) liveTypingEnabled=\(settings.settings.liveTypingEnabled) liveTypistIsNil=\(liveTypist == nil) phase=\(phase)")   // DEBUG-LIVETYPE
+        liveTypingActiveForSession = wantsLiveType
         guard wantsHUD || wantsLiveType, let liveTranscriber else { return }
         liveTask?.cancel()
         if wantsHUD { liveTranscript = "" }
@@ -219,11 +222,13 @@ public final class FlowController {
         liveTask = Task { [weak self] in
             guard let self else { return }
             guard await liveTranscriber.isReady() else { return }
+            liveTypeDebugLog("startLivePreview: liveTranscriber ready, about to begin liveTypist")   // DEBUG-LIVETYPE
             if wantsLiveType { await self.liveTypist?.begin() }
             let updates = await liveTranscriber.startSession(chunks: chunks)
             for await update in updates {
                 guard !Task.isCancelled else { break }
                 if wantsHUD { self.liveTranscript = update.displayText }
+                liveTypeDebugLog("startLivePreview: update received, displayText=\(update.displayText.prefix(50)) wantsLiveType=\(wantsLiveType)")   // DEBUG-LIVETYPE
                 if wantsLiveType { await self.liveTypist?.update(update.displayText) }
             }
             if wantsLiveType { await self.liveTypist?.clearTyped() }
@@ -354,6 +359,7 @@ public final class FlowController {
 
         setPhase(.transcribing)
         let audio = await capture.stopCapture()   // finishes the live chunk stream
+        let pendingLiveTeardown = liveTypingActiveForSession ? liveTask : nil
         endLivePreview()
         guard audio.duration >= 0.35 else { return notice("Didn't catch that") }
 
@@ -381,6 +387,10 @@ public final class FlowController {
         guard !result.text.isEmpty else { return notice("Didn't catch that") }
         let finalText = commandsOn ? VoiceCommandProcessor.applyFormatting(result.text) : result.text
 
+        // clearTyped() (backspacing the live-typed draft) runs at the tail of the
+        // live task; without waiting for it here, its backspaces can land after
+        // this insert and delete the final text instead of the draft.
+        await pendingLiveTeardown?.value
         setPhase(.inserting)
         let outcome = await inserter.insert(finalText, bundleID: bundleID)
         lastCleanedText = finalText
@@ -397,6 +407,23 @@ public final class FlowController {
             setPhase(.idle)
         case .failedTextOnClipboard:
             notice("Couldn't insert — it's on your clipboard")
+        }
+    }
+
+    // DEBUG-LIVETYPE
+    private func liveTypeDebugLog(_ message: String) {
+        let line = "\(Date()): \(message)\n"
+        if let data = line.data(using: .utf8) {
+            let path = "/tmp/localflow-livetype-debug.log"
+            if FileManager.default.fileExists(atPath: path) {
+                if let handle = FileHandle(forWritingAtPath: path) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                }
+            } else {
+                try? data.write(to: URL(fileURLWithPath: path))
+            }
         }
     }
 

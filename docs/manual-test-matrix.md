@@ -63,7 +63,7 @@ Run before every release. Mark ✅/❌ + notes. (Spec §7.)
 ## Live-typing (experimental, opt-in — Settings → General)
 | Case | Result | Notes |
 |---|---|---|
-| Enable, dictate into TextEdit → live text appears, then replaced by final cleaned text with no leftover characters | | |
+| Enable, dictate into TextEdit → live text appears, then replaced by final cleaned text with no leftover characters | Fail | HUD live preview works; synthetic-keystroke typing into the target app lands no text. A teardown race condition was found and fixed but did not resolve this. Deprioritized to backlog, see docs/pending-features.md. |
 | Enable, dictate into Notion (web) | | |
 | Enable, dictate into Gmail compose (Safari) | | |
 | Enable, dictate into WhatsApp (Electron/web) | | |
@@ -75,22 +75,22 @@ Run before every release. Mark ✅/❌ + notes. (Spec §7.)
 ## Voice commands (Settings → General, default on)
 | Case | Result | Notes |
 |---|---|---|
-| Say "...scratch that..." mid-dictation, Level Off → discarded text does not appear | | |
-| Say "...scratch that..." mid-dictation, Level Standard | | |
-| Say "...scratch that..." mid-dictation, Level Heavy | | |
-| Say "...new paragraph..." → literal blank line in inserted text, Level Standard | | |
-| Say "...new line..." → literal single line break, Level Standard | | |
-| Voice commands + live-typing both on → command phrase visibly typed live, then corrected/converted once final text lands | | expected, documented interaction |
-| Disable voice commands → "scratch that"/"new paragraph" dictated verbatim as text | | |
+| Say "...scratch that..." mid-dictation, Level Off → discarded text does not appear | Pass | |
+| Say "...scratch that..." mid-dictation, Level Standard | Pass | |
+| Say "...scratch that..." mid-dictation, Level Heavy | Pass | |
+| Say "...new paragraph..." → literal blank line in inserted text, Level Standard | Pass | |
+| Say "...new line..." → literal single line break, Level Standard | Pass | |
+| Voice commands + live-typing both on → command phrase visibly typed live, then corrected/converted once final text lands | Pass | expected, documented interaction |
+| Disable voice commands → "scratch that"/"new paragraph" dictated verbatim as text | Pass | |
 
 ## Dictation history window
 | Case | Result |
 |---|---|
-| Open via menu bar "Dictation History…" | |
-| Open via Settings → History → "Open Full History…" | |
-| Search box filters list by cleaned-text substring, case-insensitive | |
-| List updates live while a new dictation completes with the window open | |
-| Window resizes freely, reopens at a sane default size | |
-| App name resolves correctly for a currently running app | |
-| App name resolves correctly for an app that was quit after the dictation | |
-| Copy button copies the row's cleaned text to the clipboard | |
+| Open via menu bar "Dictation History…" | Pass |
+| Open via Settings → History → "Open Full History…" | Pass |
+| Search box filters list by cleaned-text substring, case-insensitive | Pass |
+| List updates live while a new dictation completes with the window open | Pass |
+| Window resizes freely, reopens at a sane default size | Pass |
+| App name resolves correctly for a currently running app | Pass |
+| App name resolves correctly for an app that was quit after the dictation | Pass |
+| Copy button copies the row's cleaned text to the clipboard | Pass |

@@ -38,3 +38,4 @@ targets:
         ENABLE_HARDENED_RUNTIME: NO     # dev builds; release signing in Task 23
         CODE_SIGN_IDENTITY: "LocalFlow Dev"   # stable self-signed identity: TCC grants survive rebuilds
         SWIFT_VERSION: "6.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
