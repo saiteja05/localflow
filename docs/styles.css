@@ -78,18 +78,6 @@ h1, h2, h3, .nav-brand, .stat-num, .hero-facts strong {
 .nav-links a { font-size: 14px; font-weight: 500; color: var(--ink-70); padding: 9px 15px; border-radius: 10px; transition: color 0.2s, background 0.2s; }
 .nav-links a:hover { color: var(--ink); background: rgba(255,255,255,0.45); }
 .nav-actions { display: inline-flex; align-items: center; gap: 10px; }
-.nav-star {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 14px; font-weight: 600; color: var(--ink);
-  background: var(--glass-strong);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--hi);
-  padding: 9px 15px; border-radius: 12px;
-  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s;
-}
-.nav-star:hover { transform: translateY(-1px); box-shadow: var(--hi), 0 6px 16px rgba(245,166,35,0.22); }
-.nav-star-ic { color: #f5a623; font-size: 15px; line-height: 1; }
 .nav-signup {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 14px; font-weight: 600; color: #fff;
