@@ -125,6 +125,10 @@ h1, h2, h3, .nav-brand, .stat-num, .hero-facts strong {
 .hero-star:hover { background: rgba(245,166,35,0.18); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(245,166,35,0.22); }
 .hero-star:hover .hero-star-ic { transform: scale(1.15) rotate(-8deg); }
 .hero-star-ic { color: #f5a623; font-size: 16px; line-height: 1; transition: transform 0.2s var(--ease); }
+.hero-coffee { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #8a6d00; padding: 13px 18px; border-radius: 14px; border: 1px solid rgba(255,221,0,0.4); background: rgba(255,221,0,0.12); transition: background 0.2s, transform 0.2s var(--ease), box-shadow 0.2s; }
+.hero-coffee:hover { background: rgba(255,221,0,0.2); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(255,221,0,0.25); }
+.hero-coffee:hover .hero-coffee-ic { transform: scale(1.15) rotate(-8deg); }
+.hero-coffee-ic { font-size: 16px; line-height: 1; transition: transform 0.2s var(--ease); }
 
 .hero-facts { list-style: none; display: flex; gap: 34px; margin-top: 40px; flex-wrap: wrap; }
 .hero-facts li { font-size: 14px; color: var(--ink-55); }
