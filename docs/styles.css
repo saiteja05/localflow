@@ -242,6 +242,14 @@ section { max-width: var(--maxw); margin: 0 auto; padding: clamp(64px, 10vw, 130
 .star-card p { color: var(--ink-70); font-size: clamp(14px, 1.5vw, 17px); max-width: 460px; }
 .star-card .cta-primary { margin-top: 10px; }
 
+/* coffee cta */
+.coffeecta { padding-top: 0; }
+.coffee-card { max-width: 720px; margin: 0 auto; padding: clamp(36px, 5vw, 56px); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.coffee-ic { font-size: 34px; line-height: 1; filter: drop-shadow(0 4px 12px rgba(255,221,87,0.35)); }
+.coffee-card h2 { font-family: 'Fustat', 'Inter', sans-serif; font-size: clamp(24px, 3.2vw, 38px); font-weight: 800; letter-spacing: -0.03em; }
+.coffee-card p { color: var(--ink-70); font-size: clamp(14px, 1.5vw, 17px); max-width: 460px; }
+.coffee-card .cta-primary { margin-top: 10px; }
+
 .req-card dt { color: var(--ink-40); font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
 .req-card dd { color: var(--ink); font-size: 14.5px; text-align: right; }
 
