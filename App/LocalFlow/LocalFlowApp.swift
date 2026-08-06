@@ -81,6 +81,7 @@ struct LocalFlowApp: App {
         case .fnKey:        return "Fn (Globe)"
         case .rightCommand: return "Right ⌘"
         case .custom:       return "your custom hotkey"
+        case .modifierChord: return "a modifier chord"   // reserved for edit mode; not offered as dictation key
         }
     }
 }
