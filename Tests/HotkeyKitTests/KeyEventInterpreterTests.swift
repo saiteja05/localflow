@@ -74,4 +74,37 @@ struct KeyEventInterpreterTests {
         let dup = i.interpret(.flagsChanged(keyCode: KeyCodes.fn, flags: KeyFlags.secondaryFn))
         #expect(dup.event == nil)
     }
+    @Test func modifierChordAnchorAloneDoesNotTrigger() {
+        var i = KeyEventInterpreter(choice: .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+        let out = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option)) // Right Option alone, no Shift
+        #expect(out.event == nil && out.swallow == false)
+        #expect(i.isHolding == false)
+    }
+    @Test func modifierChordAnchorPlusQualifierTriggersKeyDown() {
+        var i = KeyEventInterpreter(choice: .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+        let down = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option | KeyFlags.shift)) // Shift already held, then Right Option pressed
+        #expect(down.event == .keyDown && down.swallow == false)
+        #expect(i.isHolding == true)
+    }
+    @Test func modifierChordReleasingAnchorWhileQualifierHeldEndsHold() {
+        var i = KeyEventInterpreter(choice: .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+        _ = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option | KeyFlags.shift))
+        let up = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.shift)) // Option bit cleared, Shift still held
+        #expect(up.event == .keyUp && up.swallow == false)
+        #expect(i.isHolding == false)
+    }
+    @Test func modifierChordReleasingQualifierWhileAnchorHeldEndsHold() {
+        var i = KeyEventInterpreter(choice: .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+        // keyCode passed here doesn't matter for .modifierChord, only flags does:
+        _ = i.interpret(.flagsChanged(keyCode: 56, flags: KeyFlags.option | KeyFlags.shift))
+        let up = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option)) // Shift bit cleared, Option still held
+        #expect(up.event == .keyUp && up.swallow == false)
+        #expect(i.isHolding == false)
+    }
+    @Test func modifierChordExtraModifierBitPreventsExactMatch() {
+        var i = KeyEventInterpreter(choice: .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+        let out = i.interpret(.flagsChanged(keyCode: KeyCodes.rightOption, flags: KeyFlags.option | KeyFlags.shift | KeyFlags.control)) // extra Control bit: not an exact match
+        #expect(out.event == nil && out.swallow == false)
+        #expect(i.isHolding == false)
+    }
 }

@@ -70,4 +70,7 @@ struct SettingsStoreTests {
     @Test func voiceCommandsDefaultsOn() {
         #expect(SettingsStore(directory: tempDir()).settings.voiceCommandsEnabled == true)
     }
+    @Test func editHotkeyDefaultsToShiftRightOption() {
+        #expect(SettingsStore(directory: tempDir()).settings.editHotkey == .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+    }
 }

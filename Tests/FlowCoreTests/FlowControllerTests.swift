@@ -653,4 +653,37 @@ struct FlowControllerTests {
         h.controller.setPaused(false)
         #expect(h.controller.phase == .idle)
     }
+
+    @Test func editHotkeyDuringActiveDictationCancelsAndProceeds() async {
+        struct EchoTransformer: TextTransforming {
+            func transform(_ text: String, instruction: String) async -> String? {
+                "EDITED[\(text)|\(instruction)]"
+            }
+        }
+        let h = Harness(transformer: EchoTransformer(),
+                        selectionReader: { "Hello there, world" })
+        h.transcriber.result = .success(Transcript(text: "make it shorter", languageHint: nil))
+        h.controller.start()
+        h.nowRef(100)
+        // A plain dictation hold is already in progress...
+        h.hotkeys.continuation.yield(.keyDown)
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(h.controller.phase == .recording(handsFree: false))
+        // ...then the Edit hotkey fires mid-hold.
+        h.hotkeys.continuation.yield(.editKeyDown)
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(h.capture.cancelCount == 1)          // dictation discarded, not stopped-and-processed
+        #expect(h.inserter.insertedTexts.isEmpty)    // nothing inserted from the aborted dictation
+        #expect(h.controller.phase == .editing)      // Edit Mode proceeded afterward
+        #expect(h.capture.startCount == 2)           // one capture for dictation, one for edit
+        h.nowRef(100.6)
+        h.hotkeys.continuation.yield(.editKeyUp)
+        for _ in 0..<100 {
+            try? await Task.sleep(for: .milliseconds(20))
+            if case .idle = h.controller.phase { break }
+            if case .notice = h.controller.phase { break }
+        }
+        #expect(h.inserter.insertedTexts == ["EDITED[Hello there, world|make it shorter]"])
+        #expect(h.controller.phase == .idle)
+    }
 }

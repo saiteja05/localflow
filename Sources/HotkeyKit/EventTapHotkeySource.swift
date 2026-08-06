@@ -8,15 +8,16 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
     private let continuation: AsyncStream<HotkeyRawEvent>.Continuation
     private let lock = NSLock()
     private var interpreter: KeyEventInterpreter
-    private var editInterpreter = KeyEventInterpreter(choice: .rightOption)
+    private var editInterpreter: KeyEventInterpreter
     private var currentChoice: HotkeyChoice
     private var tap: CFMachPort?
     private var secureInputTimer: Timer?
     private var lastSecureInput = false
 
-    public init(choice: HotkeyChoice) {
+    public init(choice: HotkeyChoice, editChoice: HotkeyChoice = .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift)) {
         self.interpreter = KeyEventInterpreter(choice: choice)
         self.currentChoice = choice
+        self.editInterpreter = KeyEventInterpreter(choice: editChoice)
         (events, continuation) = AsyncStream.makeStream(of: HotkeyRawEvent.self)
     }
 
@@ -24,6 +25,11 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         interpreter = KeyEventInterpreter(choice: choice)
         currentChoice = choice
+    }
+
+    public func updateEditChoice(_ choice: HotkeyChoice) {
+        lock.lock(); defer { lock.unlock() }
+        editInterpreter = KeyEventInterpreter(choice: choice)
     }
 
     public enum TapError: Error { case creationFailed /* Accessibility not granted, usually */ }

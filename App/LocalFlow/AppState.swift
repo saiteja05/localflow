@@ -40,7 +40,7 @@ final class AppState {
         parakeet = ParakeetTranscriber()
         appleFM = AppleFMCleaner()
         ollama = OllamaCleaner(model: settingsStore.settings.ollamaModel)
-        hotkeySource = EventTapHotkeySource(choice: settingsStore.settings.hotkey)
+        hotkeySource = EventTapHotkeySource(choice: settingsStore.settings.hotkey, editChoice: settingsStore.settings.editHotkey)
 
         // Fallback locale mirrors the user's language override so the
         // SpeechAnalyzer fallback isn't stuck on en_US for non-English users.

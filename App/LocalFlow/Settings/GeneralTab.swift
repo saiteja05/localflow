@@ -85,10 +85,18 @@ struct GeneralTab: View {
                     if on { try? SMAppService.mainApp.register() }
                     else { try? SMAppService.mainApp.unregister() }
                 }))
-            LabeledContent("Edit hotkey") {
-                Text("Hold Right ⌥ with text selected, speak an instruction")
-                    .foregroundStyle(.secondary)
+            Picker("Edit hotkey", selection: Binding(
+                get: { appState.settingsStore.settings.editHotkey },
+                set: { choice in
+                    appState.editSettings { $0.editHotkey = choice }
+                    appState.hotkeySource.updateEditChoice(choice)
+                })) {
+                Text("Shift + Right ⌥").tag(HotkeyChoice.modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift))
+                Text("Right ⌥ alone").tag(HotkeyChoice.rightOption)
+                Text("Shift + Right ⌘").tag(HotkeyChoice.modifierChord(anchorKeyCode: KeyCodes.rightCommand, qualifierFlags: KeyFlags.shift))
             }
+            Text("Select text, hold the edit hotkey, speak an instruction: the selection is replaced by the result. If the edit hotkey shares its anchor key with the dictation hotkey above (e.g. both set to Right ⌘), you may see a brief dictation-recording flash before Edit Mode takes over.")
+                .font(.caption).foregroundStyle(.secondary)
             Text("Tip: set System Settings → Keyboard → “Press 🌐 key” to “Do Nothing” so the emoji picker never appears.")
                 .font(.caption).foregroundStyle(.secondary)
         }
