@@ -1,7 +1,7 @@
 import Foundation
 
 /// Pure translator from low-level key events to hotkey semantics.
-/// Owns NO timing logic — short-press and double-tap live in FlowCore.GestureMachine.
+/// Owns NO timing logic (short-press and double-tap live in FlowCore.GestureMachine).
 public struct KeyEventInterpreter: Sendable {
     public enum CGInput: Equatable, Sendable {
         case flagsChanged(keyCode: UInt16, flags: UInt64)
@@ -33,6 +33,13 @@ public struct KeyEventInterpreter: Sendable {
         // --- Right ⌥ (edit mode): flagsChanged keyCode 61. Never swallow (⌥-combos).
         case (.rightOption, .flagsChanged(KeyCodes.rightOption, let flags)):
             return handleModifierEdge(bitSet: flags & KeyFlags.option != 0, swallow: false)
+        // --- Modifier chord (e.g. Shift + Right ⌥): exact match on the anchor's
+        // flag plus the qualifier flags, against every flagsChanged event:
+        // deliberately ignoring which physical key changed, since the full
+        // current `flags` snapshot already tells us whether the chord holds.
+        case (.modifierChord(let anchor, let qualifiers), .flagsChanged(_, let flags)):
+            let required = (ModifierKey.flag(forKeyCode: anchor) ?? 0) | qualifiers
+            return handleModifierEdge(bitSet: flags & KeyFlags.allTracked == required, swallow: false)
         // --- Custom combo: plain keyDown/keyUp with required modifiers.
         case (.custom(let kc, let mods), .keyDown(let inputKc, let flags)) where inputKc == kc && flags & mods == mods && !holding:
             holding = true; cancelled = false

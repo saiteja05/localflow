@@ -4,6 +4,7 @@ import HotkeyKit
 
 public struct AppSettings: Codable, Equatable, Sendable {
     public var hotkey: HotkeyChoice = .fnKey
+    public var editHotkey: HotkeyChoice = .modifierChord(anchorKeyCode: KeyCodes.rightOption, qualifierFlags: KeyFlags.shift)
     public var handsFreeEnabled: Bool = true
     public var cleanupLevel: CleanupLevel = .standard
     public var languageOverride: String? = nil      // nil = auto (Parakeet v3 auto-detects)
@@ -29,6 +30,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = AppSettings()
         hotkey           = (try? c.decodeIfPresent(HotkeyChoice.self, forKey: .hotkey)).flatMap { $0 } ?? d.hotkey
+        editHotkey       = (try? c.decodeIfPresent(HotkeyChoice.self, forKey: .editHotkey)).flatMap { $0 } ?? d.editHotkey
         handsFreeEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .handsFreeEnabled)).flatMap { $0 } ?? d.handsFreeEnabled
         cleanupLevel     = (try? c.decodeIfPresent(CleanupLevel.self, forKey: .cleanupLevel)).flatMap { $0 } ?? d.cleanupLevel
         languageOverride = (try? c.decodeIfPresent(String.self, forKey: .languageOverride)).flatMap { $0 }

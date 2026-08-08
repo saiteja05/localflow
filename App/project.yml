@@ -19,7 +19,7 @@ targets:
       properties:
         LSUIElement: true                # menu bar agent: no Dock icon
         CFBundleDisplayName: LocalFlow
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleShortVersionString: "0.2.0"
         NSMicrophoneUsageDescription: >-
           LocalFlow records audio only while you hold the dictation key and
           transcribes it entirely on this Mac. Nothing is sent anywhere.

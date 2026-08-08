@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import HotkeyKit
 
 /// Reads the current selection from the frontmost app for edit mode.
 /// AX first (clean, no clipboard); synthetic ⌘C with full clipboard
@@ -41,6 +42,8 @@ public enum SelectionReader {
         else { return nil }
         down.flags = .maskCommand
         up.flags = .maskCommand
+        down.setIntegerValueField(.eventSourceUserData, value: SyntheticEventTag.userData)
+        up.setIntegerValueField(.eventSourceUserData, value: SyntheticEventTag.userData)
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         try? await Task.sleep(for: .milliseconds(150))

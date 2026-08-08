@@ -34,8 +34,10 @@ your voice never leaves your Mac.
 - **Voice commands** (on by default): say "scratch that" / "strike that" /
   "undo that" / "delete that" mid-dictation to discard everything since the
   last command; say "new paragraph" or "new line" for literal line breaks
-- **Edit mode**: select any text, hold **Right ⌥**, speak an instruction
-  ("make this more concise") — the selection is replaced by the edited text
+- **Edit mode**: select any text, hold the edit hotkey (**Shift + Right ⌥**
+  by default), speak an instruction ("make this more concise") — the
+  selection is replaced by the edited text. Configurable in Settings →
+  General, alongside the dictation hotkey.
 - **Dictation history**: every cleaned dictation is saved locally and
   searchable in a dedicated window (menu bar → "Dictation History…"), with
   one-click copy per entry
@@ -64,7 +66,7 @@ Requirements: Apple Silicon Mac, macOS 26 (Tahoe) or later.
 | Hold **Fn** (default), speak, release | Dictate |
 | Double-tap, speak, tap again | Hands-free dictation |
 | **Esc** while recording | Cancel, insert nothing |
-| Select text + hold **Right ⌥**, speak, release | Edit the selection by voice |
+| Select text + hold the edit hotkey (**Shift + Right ⌥** default), speak, release | Edit the selection by voice |
 
 Settings → General offers **Right ⌘** or a custom modifier+key combo instead of
 Fn. Tip: set System Settings → Keyboard → "Press 🌐 key" to **Do Nothing** so

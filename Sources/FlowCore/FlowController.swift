@@ -243,11 +243,12 @@ public final class FlowController {
         Task { await transcriber?.endSession() }
     }
 
-    // MARK: edit mode (hold Right ⌥ with text selected, speak an instruction)
+    // MARK: edit mode (hold the configured edit hotkey with text selected, speak an instruction)
 
     private func beginEdit() {
-        guard phase == .idle, !pipelineActive, !machine.isRecording,
-              transformer != nil, let selectionReader else { return }
+        guard !pipelineActive, transformer != nil, let selectionReader else { return }
+        if machine.isRecording { run(machine.handle(.escape)) }
+        guard phase == .idle else { return }
         editStart = now()
         phase = .editing
         Task { [weak self] in
