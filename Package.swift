@@ -21,7 +21,7 @@ let package = Package(
         .target(name: "CleanupKit"),
         .target(name: "HotkeyKit"),
         .target(name: "CaptureKit"),
-        .target(name: "InsertKit"),
+        .target(name: "InsertKit", dependencies: ["HotkeyKit"]),
         .target(name: "TranscribeKit", dependencies: [
             "CaptureKit",
             .product(name: "FluidAudio", package: "FluidAudio"),

@@ -48,6 +48,15 @@ public enum KeyFlags {
     public static let allTracked: UInt64 = secondaryFn | command | option | control | shift
 }
 
+/// Tag applied (via `CGEventField.eventSourceUserData`) to CGEvents this app
+/// synthesizes and posts itself — e.g. SelectionReader's ⌘C fallback — so
+/// EventTapHotkeySource can recognize and ignore them instead of misreading
+/// its own synthetic keystroke as a real key press that should cancel an
+/// in-progress hotkey hold.
+public enum SyntheticEventTag {
+    public static let userData: Int64 = 0x4C_46_45_44_49_54  // "LFEDIT", arbitrary non-zero sentinel
+}
+
 /// Maps a physical modifier key's keycode to the CGEventFlags bit it
 /// contributes. Lets a modifier-chord hotkey recognize its qualifier key
 /// regardless of which physical key (left/right) the user presses.

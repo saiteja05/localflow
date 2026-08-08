@@ -83,6 +83,12 @@ public final class EventTapHotkeySource: HotkeySource, @unchecked Sendable {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return Unmanaged.passUnretained(event)
         }
+        // Our own synthetic keystrokes (e.g. SelectionReader's ⌘C fallback) must
+        // never reach either interpreter — they'd be misread as a real key press
+        // that cancels an in-progress hotkey hold. Pass them through untouched.
+        if event.getIntegerValueField(.eventSourceUserData) == SyntheticEventTag.userData {
+            return Unmanaged.passUnretained(event)
+        }
         // Never feed autorepeat events to the interpreter.
         if event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
             // OS key-repeat is synthesized below the tap; the interpreter would
